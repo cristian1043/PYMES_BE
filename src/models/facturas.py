@@ -20,32 +20,3 @@ class Facturas(Base):
     id_cliente = Column(Integer, ForeignKey('clientes.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     id_metodo_pago = Column(Integer, ForeignKey('metodos_pago.id'), nullable=False)
-
-    def __init__(self, numero, subtotal, iva, descuento, total, id_cliente, id_usuario, id_metodo_pago):
-        self.numero = numero
-        self.subtotal = subtotal
-        self.iva = iva
-        self.descuento = descuento
-        self.total = total
-        self.id_cliente = id_cliente
-        self.id_usuario = id_usuario
-        self.id_metodo_pago = id_metodo_pago
-        
-def save(self):
-    session.add(self)
-    session.commit()
-
-def get():
-    facturas = session.query(Facturas).all()
-    return facturas
-
-def get_by_id(id):
-    factura = session.query(Facturas).filter_by(id=id).first()
-    return factura
-
-def update(self):
-    session.commit()
-
-def delete(self):
-    session.delete(self)
-    session.commit()

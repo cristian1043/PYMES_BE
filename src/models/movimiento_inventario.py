@@ -16,29 +16,3 @@ class MovimientosInventario(Base):
 
     id_producto = Column(Integer, ForeignKey('productos.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
-
-    def __init__(self, tipo_movimiento, cantidad, observacion, id_producto, id_usuario):
-        self.tipo_movimiento = tipo_movimiento
-        self.cantidad = cantidad
-        self.observacion = observacion
-        self.id_producto = id_producto
-        self.id_usuario = id_usuario
-        
-def save(self):
-    session.add(self)
-    session.commit()
-
-def get():
-    movimientos = session.query(MovimientosInventario).all()
-    return movimientos
-
-def get_by_id(id):
-    movimiento = session.query(MovimientosInventario).filter_by(id=id).first()
-    return movimiento
-
-def update(self):
-    session.commit()
-
-def delete(self):
-    session.delete(self)
-    session.commit()

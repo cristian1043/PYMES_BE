@@ -14,28 +14,3 @@ class Productos(Base):
     precio = Column(Float, nullable=False)
     stock = Column(Integer, nullable=False)
     id_categoria = Column(Integer, ForeignKey('categorias.id'), nullable=False)
-
-    def __init__(self, codigo, nombre, descripcion, unidad_medida, precio, stock, id_categoria):
-        self.codigo = codigo
-        self.nombre = nombre
-        self.descripcion = descripcion
-        self.unidad_medida = unidad_medida
-        self.precio = precio
-        self.stock = stock
-        self.id_categoria = id_categoria
-
-    def save(self):
-        session.add(self)
-        session.commit()
-
-    def get():
-        productos = session.query(Productos).all()
-        return productos
-    
-    def get_by_id(id):
-        producto = session.query(Productos).filter_by(id=id).first()
-        return producto
-
-    def delete(self):
-        session.delete(self)
-        session.commit()

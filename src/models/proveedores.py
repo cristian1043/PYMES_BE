@@ -12,29 +12,3 @@ class Proveedores(Base):
     direccion = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
 
-    def __init__(self, nit, nombre, contacto, telefono, direccion, email):
-        self.nit = nit
-        self.nombre = nombre
-        self.contacto = contacto
-        self.telefono = telefono
-        self.direccion = direccion
-        self.email = email
-        
-def save(self):
-    session.add(self)
-    session.commit()
-
-def get():
-    proveedores = session.query(Proveedores).all()
-    return proveedores
-
-def get_by_id(id):
-    proveedor = session.query(Proveedores).filter_by(id=id).first()
-    return proveedor
-
-def update(self):
-    session.commit()
-
-def delete(self):
-    session.delete(self)
-    session.commit()
