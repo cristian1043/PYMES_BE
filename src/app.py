@@ -35,15 +35,6 @@ from src.routes.web.reportes import reportes
 
 #registrar las rutas de la aplicación
 
-app.register_blueprint(home)
-app.register_blueprint(clientes)
-app.register_blueprint(productos)
-app.register_blueprint(facturas)
-app.register_blueprint(compras)
-app.register_blueprint(reportes)
-
-register_routes(app)
-
 if __name__ == '__main__':
     app.run(debug=True)
 
