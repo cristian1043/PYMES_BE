@@ -1,5 +1,5 @@
 from flask import Flask
-
+from flask import FlaskControllerRegister
 from src.models import Base, engine
 
 #importar los modelos para que se registren en la base de datos
@@ -17,7 +17,9 @@ from src.models.facturas import Facturas
 from src.models.detalle_facturas import DetalleFacturas
 from src.models.compras import Compras
 from src.models.detalle_compras import DetalleCompras
-from src.routes.api import register_routes
+
+
+from src.routes.api import categorias_api, clientes_api, productos_api, proveedores_api, roles_api, usuarios_api, metodos_pago_api, facturas_api, detalle_facturas_api, compras_api, detalle_compras_api
 #crear todas las tablas en la base de datos
 
 Base.metadata.create_all(bind=engine)
@@ -26,16 +28,8 @@ app = Flask(__name__)
 
 #importar las rutas de la aplicación
 
-from src.routes.web.home import home
-from src.routes.web.clientes import clientes
-from src.routes.web.productos import productos
-from src.routes.web.facturas import facturas
-from src.routes.web.compras import compras
-from src.routes.web.reportes import reportes
-
-#registrar las rutas de la aplicación
-register_routes(app)
+register_controllers = FlaskControllerRegister(app)
+register_controllers.register.package('src.controllers')
 
 if __name__ == '__main__':
     app.run(debug=True)
-
