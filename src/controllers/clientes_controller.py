@@ -1,5 +1,3 @@
-from src.models import session
-from src.models.categorias import Categorias
 from src.models.clientes import Clientes
 
 
