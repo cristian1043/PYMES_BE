@@ -47,3 +47,4 @@ class ClientesController:
 
         cliente.delete()
         return True
+
