@@ -1,6 +1,3 @@
-from sqlalchemy.exc import SQLAlchemyError
-
-from src.models import session
 from src.models.compras import Compras
 
 

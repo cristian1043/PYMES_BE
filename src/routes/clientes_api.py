@@ -37,7 +37,9 @@ def create_cliente():
 
     cliente = ClientesController.save(data)
 
-    return jsonify(cliente.to_dict()), 201
+    return jsonify(cliente.to_dict()), 
+
+
 # ===========================
 # Actualizar cliente
 # ===========================
