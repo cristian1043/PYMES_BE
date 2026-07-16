@@ -11,7 +11,7 @@ class Clientes(Base):
     direccion = Column(String(255), nullable=False)
     telefono = Column(String(20), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
-    created_at = Column(DateTime, default=date.today) 
+    created_at = Column(DateTime, default=datetime.utcnow) 
 
     def save(self):
         session.add(self)

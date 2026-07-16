@@ -1,6 +1,5 @@
-from sqlalchemy.exc import SQLAlchemyError
-
 from src.models import session
+from src.models.categorias import Categorias
 from src.models.clientes import Clientes
 
 
@@ -8,53 +7,45 @@ class ClientesController:
 
     @staticmethod
     def get():
-        return session.query(Clientes).all()
-
+        return Clientes.get()
 
     @staticmethod
     def get_by_id(id):
-        return session.query(Clientes).filter_by(id=id).first()
-
+        return Clientes.get_by_id(id)
 
     @staticmethod
-    def save(cliente):
+    def save(data):
+        cliente = Clientes()
+        cliente.documento = data["documento"]
+        cliente.nombre = data["nombre"]
+        cliente.direccion = data["direccion"]
+        cliente.telefono = data["telefono"]
+        cliente.email = data["email"]
+        cliente.save()
+        return cliente
 
-        try:
-            session.add(cliente)
-            session.commit()
-            return cliente
+    @staticmethod
+    def update(id, data):
+        cliente = Clientes.get_by_id(id)
 
-        except SQLAlchemyError:
-            session.rollback()
+        if cliente is None:
             return None
 
+        cliente.documento = data["documento"]
+        cliente.nombre = data["nombre"]
+        cliente.direccion = data["direccion"]
+        cliente.telefono = data["telefono"]
+        cliente.email = data["email"]
+        cliente.update()
+
+        return cliente
 
     @staticmethod
-    def update(cliente):
+    def delete(id):
+        cliente = Clientes.get_by_id(id)
 
         if cliente is None:
             return False
 
-        try:
-            session.commit()
-            return True
-
-        except SQLAlchemyError:
-            session.rollback()
-            return False
-
-
-    @staticmethod
-    def delete(cliente):
-
-        if cliente is None:
-            return False
-
-        try:
-            session.delete(cliente)
-            session.commit()
-            return True
-
-        except SQLAlchemyError:
-            session.rollback()
-            return False
+        cliente.delete()
+        return True
