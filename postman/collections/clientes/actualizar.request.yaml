@@ -4,4 +4,7 @@ url: http://127.0.0.1:5000/api/clientes/1
 method: PUT
 headers:
   Content-Type: application/json
+body:
+  type: json
+  content: ""
 order: 4257502549618927

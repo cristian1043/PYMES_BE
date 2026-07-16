@@ -45,10 +45,16 @@ def create_cliente():
 # ===========================
 @clientes_bp.route("/<int:id>", methods=["PUT"])
 def update_cliente(id):
-
     data = request.get_json()
 
-    return jsonify(data), 200
+    cliente = ClientesController.update(id, data)
+
+    if cliente:
+        return jsonify(cliente.to_dict()), 200
+
+    return jsonify({
+        "mensaje": "Cliente no encontrado"
+    }), 404
 
 
 # ===========================
