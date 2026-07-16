@@ -34,9 +34,11 @@ def get_categoria(id):
 def create_categoria():
     data = request.get_json()
 
+    categoria = CategoriasController.save(data)
+    
     print(data)
 
-    return jsonify(data), 201
+    return jsonify(categoria.to_dict()), 201
 
 
 # ===========================
