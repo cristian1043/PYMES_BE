@@ -38,15 +38,10 @@ from src.routes import (
     detalle_compras_bp
 )
 
-app.register_blueprint(
-    categorias_bp,
-    url_prefix="/api/categorias"
-)
-
-
 
 # Register all blueprints
 
+app.register_blueprint(categorias_bp,url_prefix="/api/categorias")
 app.register_blueprint(clientes_bp, url_prefix="/api/clientes")
 app.register_blueprint(productos_bp, url_prefix="/api/productos")
 app.register_blueprint(proveedores_bp, url_prefix="/api/proveedores")
