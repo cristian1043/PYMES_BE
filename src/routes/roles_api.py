@@ -35,7 +35,7 @@ def get_rol(id):
 def create_rol():
     data = request.get_json()
 
-    rol = RolesController.create(data)
+    rol = RolesController.save(data)
 
     return jsonify(rol.to_dict()), 201
 
