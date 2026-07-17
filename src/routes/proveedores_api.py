@@ -10,7 +10,7 @@ proveedores_bp = Blueprint("proveedores", __name__)
 @proveedores_bp.route("/", methods=["GET"])
 def get_proveedores():
     proveedores = ProveedoresController.get()
-    return jsonify(proveedores), 200
+    return jsonify([c.to_dict() for c in proveedores]), 200
 
 
 # ===========================
@@ -21,7 +21,7 @@ def get_proveedor(id):
     proveedor = ProveedoresController.get_by_id(id)
 
     if proveedor:
-        return jsonify(proveedor), 200
+        return jsonify(proveedor.to_dict()), 200
 
     return jsonify({
         "mensaje": "Proveedor no encontrado"
@@ -35,9 +35,9 @@ def get_proveedor(id):
 def create_proveedor():
     data = request.get_json()
 
-    proveedor = ProveedoresController.create(data)
+    proveedor = ProveedoresController.save(data)
 
-    return jsonify(proveedor), 201
+    return jsonify(proveedor.to_dict()), 201
 
 
 # ===========================
@@ -50,7 +50,7 @@ def update_proveedor(id):
     proveedor = ProveedoresController.update(id, data)
 
     if proveedor:
-        return jsonify(proveedor), 200
+        return jsonify(proveedor.to_dict()), 200
 
     return jsonify({
         "mensaje": "Proveedor no encontrado"

@@ -4,5 +4,23 @@ url: http://127.0.0.1:5000/api/compras
 method: POST
 body:
   type: json
-  content: ""
+  content: "{\r
+
+    \    \"numero\": \"COMP-001\",\r
+
+    \    \"fecha\": \"2026-07-16 19:30:00\",\r
+
+    \    \"subtotal\": 100000,\r
+
+    \    \"iva\": 19000,\r
+
+    \    \"descuento\": 5000,\r
+
+    \    \"total\": 114000,\r
+
+    \    \"id_proveedor\": 1,\r
+
+    \    \"id_usuario\": 1\r
+
+    }"
 order: 4080178134513480

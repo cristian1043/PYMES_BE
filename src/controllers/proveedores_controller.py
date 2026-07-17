@@ -1,6 +1,3 @@
-from sqlalchemy.exc import SQLAlchemyError
-
-from src.models import session
 from src.models.proveedores import Proveedores
 
 
@@ -8,52 +5,48 @@ class ProveedoresController:
 
     @staticmethod
     def get():
-        return session.query(Proveedores).all()
-
+        return Proveedores.get()
 
     @staticmethod
     def get_by_id(id):
-        return session.query(Proveedores).filter_by(id=id).first()
-
+        return Proveedores.get_by_id(id)
 
     @staticmethod
-    def save(proveedor):
+    def save(data):
+        proveedor = Proveedores()
+        proveedor.nit = data["nit"]
+        proveedor.nombre = data["nombre"]
+        proveedor.contacto = data["contacto"]
+        proveedor.telefono = data["telefono"]
+        proveedor.direccion = data["direccion"]
+        proveedor.email = data["email"]
+        proveedor.save()
+        return proveedor
 
-        try:
-            session.add(proveedor)
-            session.commit()
-            return proveedor
+    @staticmethod
+    def update(id, data):
+        proveedor = Proveedores.get_by_id(id)
 
-        except SQLAlchemyError:
-            session.rollback()
+        if proveedor is None:
             return None
 
+        proveedor.nit = data["nit"]
+        proveedor.nombre = data["nombre"]
+        proveedor.contacto = data["contacto"]
+        proveedor.telefono = data["telefono"]
+        proveedor.direccion = data["direccion"]
+        proveedor.email = data["email"]
+
+        proveedor.update()
+
+        return proveedor
 
     @staticmethod
-    def update(proveedor):
-        
-        if proveedor is None:
-            return False
-        try:
-            session.commit()
-            return True
-
-        except SQLAlchemyError:
-            session.rollback()
-            return False
-
-
-    @staticmethod
-    def delete(proveedor):
+    def delete(id):
+        proveedor = Proveedores.get_by_id(id)
 
         if proveedor is None:
             return False
 
-        try:
-            session.delete(proveedor)
-            session.commit()
-            return True
-
-        except SQLAlchemyError:
-            session.rollback()
-            return False
+        proveedor.delete()
+        return True
