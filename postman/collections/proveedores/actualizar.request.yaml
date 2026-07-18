@@ -1,7 +1,20 @@
 $kind: http-request
 name: actualizar
-url: http://127.0.0.1:5000/api/proveedores/1
+url: http://127.0.0.1:5000/api/proveedores/2
 method: PUT
-headers:
-  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \    \"nit\": \"prov-2\",\r
+
+    \    \"nombre\": \"Insumos del Caribe S.A.S.\",\r
+
+    \    \"telefono\": \"3159876543\",\r
+
+    \    \"direccion\": \"Avenida Pedro de Heredia #45-10, Cartagena\",\r
+
+    \    \"email\": \"ventas@insumoscaribe.com\"\r
+
+    }"
 order: 4502921479118691

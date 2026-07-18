@@ -1,4 +1,8 @@
 $kind: http-request
+name: obtener
 url: http://127.0.0.1:5000/api/proveedores
 method: GET
+body:
+  type: json
+  content: ""
 order: 1784252674384

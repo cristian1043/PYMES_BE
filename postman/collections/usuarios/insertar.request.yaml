@@ -2,4 +2,21 @@ $kind: http-request
 name: insertar
 url: http://127.0.0.1:5000/api/usuarios
 method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"nombre\": \"Cristian\",\r
+
+    \    \"apellido\": \"Jiménez\",\r
+
+    \    \"telefono\": \"3001234567\",\r
+
+    \    \"email\": \"cristian@pymesoft.com\",\r
+
+    \    \"password\": \"123456\",\r
+
+    \    \"id_rol\": 1\r
+
+    }"
 order: 743548451092694

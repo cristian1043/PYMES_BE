@@ -35,7 +35,7 @@ def get_usuario(id):
 def create_usuario():
     data = request.get_json()
 
-    usuario = UsuariosController.create(data)
+    usuario = UsuariosController.save(data)
 
     return jsonify(usuario.to_dict()), 201
 
@@ -56,7 +56,7 @@ def update_usuario(id):
         "mensaje": "Usuario no encontrado"
     }), 404
 
-
+ 
 # ===========================
 # Eliminar usuario
 # ===========================

@@ -1,4 +1,3 @@
-from src.models.clientes import Clientes
 from src.models.usuarios import Usuarios
  
 
