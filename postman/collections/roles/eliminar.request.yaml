@@ -1,4 +1,5 @@
 $kind: http-request
-url: ""
+name: eliminar
+url: http://127.0.0.1:5000/api/roles/
 method: DELETE
 order: 4242483147308668

@@ -1,4 +1,14 @@
 $kind: http-request
-url: http://127.0.0.1:5000/api/roles/
+name: actualizar
+url: http://127.0.0.1:5000/api/roles/2
 method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"nombre\": \"Administrador\",\r
+
+    \    \"descripcion\": \"Acceso completo al sistema, pero no a todo\"\r
+
+    }"
 order: 3582851155059338
