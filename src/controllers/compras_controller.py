@@ -5,8 +5,7 @@ from src.models.compras import Compras
 class ComprasController:
     @staticmethod
     def get():
-        compras = Compras.get()
-        return compras.get()
+        return Compras.get()
 
     @staticmethod
     def get_by_id(id):
