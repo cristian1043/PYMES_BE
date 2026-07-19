@@ -6,7 +6,7 @@ class ComprasController:
     @staticmethod
     def get():
         compras = Compras.get()
-        return [compra.to_dict() for compra in compras]
+        return compras.get()
 
     @staticmethod
     def get_by_id(id):

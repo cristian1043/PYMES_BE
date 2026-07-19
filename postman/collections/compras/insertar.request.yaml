@@ -6,9 +6,7 @@ body:
   type: json
   content: "{\r
 
-    \    \"numero\": \"COMP-002\",\r
-
-    \    \"fecha\": \"2026-07-16 19:30:00\",\r
+    \    \"numero\": \"COMP-003\",\r
 
     \    \"subtotal\": 460000,\r
 
@@ -16,7 +14,7 @@ body:
 
     \    \"descuento\": 4000,\r
 
-    \    \"total\": 464000,\r
+    \    \"total\": 475000,\r
 
     \    \"id_proveedor\": 1,\r
 
