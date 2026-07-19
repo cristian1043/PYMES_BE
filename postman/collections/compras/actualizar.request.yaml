@@ -6,5 +6,21 @@ headers:
   Content-Type: application/json
 body:
   type: json
-  content: ""
+  content: "{\r
+
+    \    \"numero\": \"COMP-003\",\r
+
+    \    \"subtotal\": 4600000,\r
+
+    \    \"iva\": 190000,\r
+
+    \    \"descuento\": 40000,\r
+
+    \    \"total\": 4750000,\r
+
+    \    \"id_proveedor\": 1,\r
+
+    \    \"id_usuario\": 1\r
+
+    }"
 order: 4257502549618927

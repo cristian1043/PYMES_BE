@@ -1,4 +1,5 @@
 $kind: http-request
-url: http://127.0.0.1:5000/api/usuarios/
+name: obtener por id
+url: http://127.0.0.1:5000/api/usuarios/1
 method: GET
 order: 552325139807181

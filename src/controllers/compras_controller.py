@@ -1,4 +1,3 @@
-from src.models.categorias import Categorias
 from src.models.compras import Compras
 
  
@@ -11,12 +10,11 @@ class ComprasController:
     def get_by_id(id):
         compra = Compras.get_by_id(id)
 
-        if compra is not None:
+        if compra is None:
             return None
         
         return compra
 
-        return None
 
     @staticmethod
     def create(data):
