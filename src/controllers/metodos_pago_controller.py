@@ -12,7 +12,7 @@ class MetodosPagoController:
         return MetodosPago.get_by_id(id)
 
         if metodo_pago is None:
-            return None
+            return "Método de pago no encontrado"
         
         return metodo_pago
     
@@ -34,7 +34,7 @@ class MetodosPagoController:
         metodo_pago = MetodosPago.get_by_id(id)
 
         if metodo_pago is None:
-            return None
+            return "Método de pago no encontrado"
 
         metodo_pago.nombre = data["nombre"]
         metodo_pago.descripcion = data.get("descripcion", None)
@@ -50,8 +50,7 @@ class MetodosPagoController:
         metodo_pago = MetodosPago.get_by_id(id)
 
         if metodo_pago is None:
-            return False
-
-        metodo_pago.delete()
+            return "Método de pago no encontrado"
         
-        return True
+        metodo_pago.delete()
+        return "Método de pago eliminado"

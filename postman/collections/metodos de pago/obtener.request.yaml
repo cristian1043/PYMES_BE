@@ -1,4 +1,8 @@
 $kind: http-request
-url: ""
+name: obtener
+url: 127.0.0.1:5000/api/metodos_pago
 method: GET
+body:
+  type: json
+  content: ""
 order: 1784457741433

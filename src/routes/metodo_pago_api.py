@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from src.controllers.metodos_pago_controller import MetodoPagoController
 
-metodo_pago_bp = Blueprint("metodo_pago", __name__)
+metodo_pago_bp = Blueprint("metodos_pago", __name__)
 
 # ===========================
 # Obtener todos los métodos de pago
