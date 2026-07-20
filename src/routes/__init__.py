@@ -8,5 +8,5 @@ from .facturas_api import facturas_bp
 from .detalle_facturas_api import detalle_facturas_bp
 from .compras_api import compras_bp
 from .detalle_compras_api import detalle_compras_bp
-
+from .metodo_pago_api import metodo_pago_bp
  
