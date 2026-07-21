@@ -12,7 +12,7 @@ class ComprasController:
         compra = Compras.get_by_id(id)
 
         if compra is None:
-            return None
+            return "Compra no encontrada"
         
         return compra
 

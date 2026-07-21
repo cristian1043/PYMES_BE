@@ -1,15 +1,15 @@
-from src.models.metodos_pago import MetodosPago
+from src.models.metodos_pago import metodos_Pago
 
 
 class MetodosPagoController:
 
     @staticmethod
     def get():
-        return MetodosPago.get()
+        return metodos_Pago.get()
  
     @staticmethod
     def get_by_id(id):
-        return MetodosPago.get_by_id(id)
+        return metodos_Pago.get_by_id(id)
 
         if metodo_pago is None:
             return "Método de pago no encontrado"
@@ -19,38 +19,38 @@ class MetodosPagoController:
     @staticmethod
     def create(id, data):
 
-        metodo_pago = MetodosPago()
+        metodos_pago = metodos_Pago()
         
-        metodo_pago.nombre = data["nombre"]
-        metodo_pago.descripcion = data.get("descripcion", None)
+        metodos_pago.nombre = data["nombre"]
+        metodos_pago.descripcion = data.get("descripcion", None)
         
-        metodo_pago.save()
+        metodos_pago.save()
         
-        return metodo_pago
+        return metodos_pago
 
     @staticmethod
     def update(id, data):
 
-        metodo_pago = MetodosPago.get_by_id(id)
+        metodos_pago = metodos_Pago.get_by_id(id)
 
-        if metodo_pago is None:
+        if metodos_pago is None:
             return "Método de pago no encontrado"
 
-        metodo_pago.nombre = data["nombre"]
-        metodo_pago.descripcion = data.get("descripcion", None)
+        metodos_pago.nombre = data["nombre"]
+        metodos_pago.descripcion = data.get("descripcion", None)
 
-        metodo_pago.update()
+        metodos_pago.update()
 
-        return metodo_pago
+        return metodos_pago
 
 
     @staticmethod
     def delete(id):
 
-        metodo_pago = MetodosPago.get_by_id(id)
+        metodos_pago = metodos_Pago.get_by_id(id)
 
-        if metodo_pago is None:
+        if metodos_pago is None:
             return "Método de pago no encontrado"
         
-        metodo_pago.delete()
+        metodos_pago.delete()
         return "Método de pago eliminado"
