@@ -1,56 +1,56 @@
-from src.models.metodos_pago import metodos_Pago
+from src.models.metodos_pago import metodosPago
 
 
 class MetodosPagoController:
 
     @staticmethod
     def get():
-        return metodos_Pago.get()
+        return metodosPago.get()
  
     @staticmethod
     def get_by_id(id):
-        return metodos_Pago.get_by_id(id)
+        return metodosPago.get_by_id(id)
 
-        if metodo_pago is None:
+        if metodosPago is None:
             return "Método de pago no encontrado"
         
-        return metodo_pago
+        return metodosPago
     
     @staticmethod
-    def create(id, data):
+    def save(id, data):
 
-        metodos_pago = metodos_Pago()
+        metodosPago = metodosPago()
         
-        metodos_pago.nombre = data["nombre"]
-        metodos_pago.descripcion = data.get("descripcion", None)
+        metodosPago.nombre = data["nombre"]
+        metodosPago.descripcion = data.get("descripcion", None)
         
-        metodos_pago.save()
+        metodosPago.save()
         
-        return metodos_pago
+        return metodosPago
 
     @staticmethod
     def update(id, data):
 
-        metodos_pago = metodos_Pago.get_by_id(id)
+        metodosPago = metodosPago.get_by_id(id)
 
-        if metodos_pago is None:
+        if metodosPago is None:
             return "Método de pago no encontrado"
 
-        metodos_pago.nombre = data["nombre"]
-        metodos_pago.descripcion = data.get("descripcion", None)
+        metodosPago.nombre = data["nombre"]
+        metodosPago.descripcion = data.get("descripcion", None)
 
-        metodos_pago.update()
+        metodosPago.update()
 
-        return metodos_pago
+        return metodosPago
 
 
     @staticmethod
     def delete(id):
 
-        metodos_pago = metodos_Pago.get_by_id(id)
+        metodosPago = metodosPago.get_by_id(id)
 
-        if metodos_pago is None:
+        if metodosPago is None:
             return "Método de pago no encontrado"
         
-        metodos_pago.delete()
+        metodosPago.delete()
         return "Método de pago eliminado"

@@ -35,7 +35,7 @@ def get_factura(id):
 def create_factura():
     data = request.get_json()
 
-    factura = FacturasController.create(data)
+    factura = FacturasController.save(data)
 
     return jsonify(factura.to_dict()), 201
 
