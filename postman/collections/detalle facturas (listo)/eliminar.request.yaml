@@ -1,0 +1,5 @@
+$kind: http-request
+name: eliminar
+url: http://127.0.0.1:5000/api/detalle_facturas/
+method: DELETE
+order: 4460516055885171

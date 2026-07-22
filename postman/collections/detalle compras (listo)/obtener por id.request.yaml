@@ -1,0 +1,5 @@
+$kind: http-request
+name: obtener por id
+url: http://127.0.0.1:5000/api/detalle_compras/4
+method: GET
+order: 1700299416726295

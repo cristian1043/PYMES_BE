@@ -34,9 +34,7 @@ def get_cliente(id):
 @clientes_bp.route("/", methods=["POST"])
 def create_cliente():
     data = request.get_json()
-
     cliente = ClientesController.save(data)
-
     return jsonify(cliente.to_dict()), 
 
 

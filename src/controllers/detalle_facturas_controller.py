@@ -1,60 +1,64 @@
-from sqlalchemy.exc import SQLAlchemyError
-
-from src.models import session
 from src.models.detalle_facturas import DetalleFacturas
-
+ 
 
 class DetalleFacturasController:
 
     @staticmethod
     def get():
-        return session.query(DetalleFacturas).all()
+        return DetalleFacturas.get()
 
 
     @staticmethod
     def get_by_id(id):
-        return session.query(DetalleFacturas).filter_by(id=id).first()
-
+        return DetalleFacturas.get_by_id(id)
+    
+        if detalle is None:
+            return "Detalle de factura no encontrado"
+        
+        return detalle
+     
+    @staticmethod
+    def create(data):
+        detalle = DetalleFacturas()
+        
+        detalle.cantidad = data["cantidad"]
+        detalle.precio_unitario = data["precio_unitario"]
+        detalle.subtotal = data["subtotal"]
+        detalle.id_factura = data["id_factura"]
+        detalle.id_producto = data["id_producto"]
+        
+        detalle.create()
+        
+        return detalle
 
     @staticmethod
-    def save(detalle_factura):
+    def update(id, data):
 
-        try:
-            session.add(detalle_factura)
-            session.commit()
-            return detalle_factura
+        detalle = DetalleFacturas.get_by_id(id)
 
-        except SQLAlchemyError:
-            session.rollback()
-            return None
+        if detalle is None:
+            return "Detalle de factura no encontrado"
 
-
-    @staticmethod
-    def update(detalle_factura):
-
-        if detalle_factura is None:
-            return False
-
-        try:
-            session.commit()
-            return True
-
-        except SQLAlchemyError:
-            session.rollback()
-            return False
-
+        detalle.cantidad = data["cantidad"]
+        detalle.precio_unitario = data["precio_unitario"]
+        detalle.subtotal = data["subtotal"]
+        detalle.id_factura = data["id_factura"]
+        detalle.id_producto = data["id_producto"]
+        
+        detalle.update()
+        
+        return detalle
 
     @staticmethod
-    def delete(detalle_factura):
+    def delete(id):
 
-        if detalle_factura is None:
-            return False
+        detalle = DetalleFacturas.get_by_id(id)
 
-        try:
-            session.delete(detalle_factura)
-            session.commit()
-            return True
+        if detalle is None:
+            return "Detalle de factura no encontrado"
 
-        except SQLAlchemyError:
-            session.rollback()
-            return False
+        detalle.delete()
+
+        return True and "Detalle de factura eliminado correctamente"
+
+      

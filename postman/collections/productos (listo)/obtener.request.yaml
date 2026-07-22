@@ -1,0 +1,5 @@
+$kind: http-request
+name: obtener
+url: http://127.0.0.1:5000/api/productos
+method: GET
+order: 1784448573493

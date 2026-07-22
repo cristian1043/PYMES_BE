@@ -1,0 +1,16 @@
+$kind: http-request
+name: actualizar
+url: 127.0.0.1:5000/api/metodos_pago/4
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \        \"descripcion\": \"Pago realizado mediante la billetera digital Daviplata .\",\r
+
+    \        \"id\": 5,\r
+
+    \        \"nombre\": \"Daviplata\"\r
+
+    \    }"
+order: 3277035265283792

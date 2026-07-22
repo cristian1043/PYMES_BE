@@ -1,0 +1,5 @@
+$kind: http-request
+name: actualizar
+url: http://127.0.0.1:5000/api/detalle_compras/
+method: PUT
+order: 4357887793676909

@@ -1,0 +1,24 @@
+$kind: http-request
+name: insertar
+url: http://127.0.0.1:5000/api/productos
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"codigo\": \"PROD-003\",\r
+
+    \    \"nombre\": \"Monitor LG 24 Pulgadas\",\r
+
+    \    \"descripcion\": \"Monitor Full HD IPS\",\r
+
+    \    \"unidad_medida\": \"UND\",\r
+
+    \    \"precio\": 680000,\r
+
+    \    \"stock\": 12,\r
+
+    \    \"id_categoria\": 1\r
+
+    }"
+order: 4164193642695334

@@ -1,0 +1,24 @@
+$kind: http-request
+name: actualizar
+url: http://127.0.0.1:5000/api/productos/1
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"codigo\": \"PROD-001\",\r
+
+    \    \"nombre\": \"Teclado Mecánico Redragon K552\",\r
+
+    \    \"descripcion\": \"Teclado mecánico con switches rojos\",\r
+
+    \    \"unidad_medida\": \"UND\",\r
+
+    \    \"precio\": 185000,\r
+
+    \    \"stock\": 26,\r
+
+    \    \"id_categoria\": 1\r
+
+    }"
+order: 4281652082005996

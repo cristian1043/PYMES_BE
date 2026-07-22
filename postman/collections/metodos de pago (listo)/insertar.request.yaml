@@ -1,0 +1,14 @@
+$kind: http-request
+name: insertar
+url: 127.0.0.1:5000/api/metodos_pago
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"nombre\": \"Daviplata\",\r
+
+    \    \"descripcion\": \"Pago realizado mediante la billetera digital Daviplata.\"\r
+
+    }"
+order: 1019211036412717

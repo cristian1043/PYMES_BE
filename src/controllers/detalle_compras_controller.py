@@ -1,6 +1,3 @@
-from sqlalchemy.exc import SQLAlchemyError
-
-from src.models import session
 from src.models.detalle_compras import DetalleCompras
 
 
@@ -8,53 +5,58 @@ class DetalleComprasController:
 
     @staticmethod
     def get():
-        return session.query(DetalleCompras).all()
-
+        return DetalleCompras.get()
 
     @staticmethod
     def get_by_id(id):
-        return session.query(DetalleCompras).filter_by(id=id).first()
+        detalle = DetalleCompras.get_by_id(id)
 
-
-    @staticmethod
-    def save(detalle_compra):
-
-        try:
-            session.add(detalle_compra)
-            session.commit()
-            return detalle_compra
-
-        except SQLAlchemyError:
-            session.rollback()
+        if detalle is None:
             return None
 
+        return detalle
 
     @staticmethod
-    def update(detalle_compra):
+    def create(data):
 
-        if detalle_compra is None:
-            return False
+        detalle = DetalleCompras()
 
-        try:
-            session.commit()
-            return True
+        detalle.cantidad = data["cantidad"]
+        detalle.costo_unitario = data["costo_unitario"]
+        detalle.subtotal = data["subtotal"]
+        detalle.id_compra = data["id_compra"]
+        detalle.id_producto = data["id_producto"]
 
-        except SQLAlchemyError:
-            session.rollback()
-            return False
+        detalle.save()
 
+        return detalle
 
     @staticmethod
-    def delete(detalle_compra):
+    def update(id, data):
 
-        if detalle_compra is None:
+        detalle = DetalleCompras.get_by_id(id)
+
+        if detalle is None:
+            return None
+
+        detalle.cantidad = data["cantidad"]
+        detalle.costo_unitario = data["costo_unitario"]
+        detalle.subtotal = data["subtotal"]
+        detalle.id_compra = data["id_compra"]
+        detalle.id_producto = data["id_producto"]
+
+        detalle.update()
+
+        return detalle
+
+    @staticmethod
+    def delete(id):
+
+        detalle = DetalleCompras.get_by_id(id)
+
+        if detalle is None:
             return False
 
-        try:
-            session.delete(detalle_compra)
-            session.commit()
-            return True
+        detalle.delete()
 
-        except SQLAlchemyError:
-            session.rollback()
-            return False
+        return True

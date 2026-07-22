@@ -1,0 +1,22 @@
+$kind: http-request
+name: actualizar
+url: http://127.0.0.1:5000/api/detalle_facturas/2
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"cantidad\": 2,\r
+
+    \    \"id\": 2,\r
+
+    \    \"id_factura\": 3,\r
+
+    \    \"id_producto\": 1,\r
+
+    \    \"precio_unitario\": 185000.0,\r
+
+    \    \"subtotal\": 370000.0\r
+
+    }"
+order: 4357887793676909

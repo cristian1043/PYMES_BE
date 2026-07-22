@@ -30,7 +30,7 @@ class ComprasController:
         compra.id_proveedor = data["id_proveedor"]
         compra.id_usuario = data["id_usuario"]
 
-        compra.save()
+        compra.create()
 
         return compra
 
@@ -40,7 +40,7 @@ class ComprasController:
         compra = Compras.get_by_id(id)
 
         if compra is None:
-            return None
+            return "Compra no encontrada"
 
         compra.numero = data["numero"]
         compra.subtotal = data["subtotal"]
@@ -58,10 +58,8 @@ class ComprasController:
     def delete(id):
 
         compra = Compras.get_by_id(id)
-
         if compra is None:
-            return False
-
+            return "Compra no encontrada"
         compra.delete()
 
-        return True
+        return True and "Compra eliminada correctamente"

@@ -7,7 +7,7 @@ class Categorias(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100), nullable=False)
 
-    def save(self):
+    def create(self):
         session.add(self)
         session.commit()
 

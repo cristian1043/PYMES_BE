@@ -16,3 +16,33 @@ class MovimientosInventario(Base):
 
     id_producto = Column(Integer, ForeignKey('productos.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+
+    def save(self):
+        session.add(self)
+        session.commit()
+
+    @staticmethod
+    def get():
+        return session.query(MovimientosInventario).all()
+
+    @staticmethod
+    def get_by_id(id):
+        return session.query(MovimientosInventario).filter_by(id=id).first()
+
+    def update(self):
+        session.commit()
+
+    def delete(self):
+        session.delete(self)
+        session.commit()
+        
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "tipo_movimiento": self.tipo_movimiento,
+            "cantidad": self.cantidad,
+            "fecha": self.fecha,
+            "observacion": self.observacion,
+            "id_producto": self.id_producto,
+            "id_usuario": self.id_usuario
+        }

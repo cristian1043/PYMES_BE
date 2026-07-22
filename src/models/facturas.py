@@ -21,11 +21,17 @@ class Facturas(Base):
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     id_metodo_pago = Column(Integer, ForeignKey('metodos_pago.id'), nullable=False)
 
+    def create(self):
+        session.add(self)
+        session.commit()
+    
+    @staticmethod
     def get():
         return session.query(Facturas).all()
-
+ 
+    @staticmethod
     def get_by_id(id):
-        return session.query(Facturas).filter(Facturas.id == id).first()
+        return session.query(Facturas).filter_by(id=id).first()
 
     def update(self):
         session.commit()
@@ -33,7 +39,7 @@ class Facturas(Base):
     def delete(self):
         session.delete(self)
         session.commit()
-        
+         
     def to_dict(self):
         return {
             "id": self.id,

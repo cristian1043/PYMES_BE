@@ -1,0 +1,28 @@
+$kind: http-request
+name: actualizar
+url: http://127.0.0.1:5000/api/facturas/4
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \    \"numero\": \"FAC-002\",\r
+
+    \    \"fecha\": \"2026-07-21 23:40:00\",\r
+
+    \    \"subtotal\": 230000,\r
+
+    \    \"iva\": 43700,\r
+
+    \    \"descuento\": 0,\r
+
+    \    \"total\": 273700,\r
+
+    \    \"id_cliente\": 2,\r
+
+    \    \"id_usuario\": 1,\r
+
+    \    \"id_metodo_pago\": 1\r
+
+    }"
+order: 4281652082005996

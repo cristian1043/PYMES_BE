@@ -11,10 +11,10 @@ class CategoriasController:
         return Categorias.get_by_id(id)
 
     @staticmethod
-    def save(data):
+    def create(data):
         categoria = Categorias()
         categoria.nombre = data["nombre"]
-        categoria.save()
+        categoria.create()
         return categoria
 
     @staticmethod

@@ -15,11 +15,11 @@ class Compras(Base):
     iva = Column(Float, nullable=False)
     descuento = Column(Float, nullable=False)
     total = Column(Float, nullable=False)
-
+ 
     id_proveedor = Column(Integer, ForeignKey('proveedores.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
 
-    def save(self):
+    def create(self):
         session.add(self)
         session.commit()
 
@@ -30,7 +30,7 @@ class Compras(Base):
     @staticmethod
     def get_by_id(id):
         return session.query(Compras).filter_by(id=id).first()
-
+ 
     def update(self):
         session.commit()
     

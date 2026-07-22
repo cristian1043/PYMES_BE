@@ -1,0 +1,20 @@
+$kind: http-request
+name: insertar
+url: http://127.0.0.1:5000/api/detalle_compras
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"cantidad\": 10,\r
+
+    \    \"costo_unitario\": 25000,\r
+
+    \    \"subtotal\": 250000,\r
+
+    \    \"id_compra\": 1,\r
+
+    \    \"id_producto\": 1\r
+
+    }"
+order: 2032808554413190

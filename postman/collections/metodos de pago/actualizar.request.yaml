@@ -1,5 +1,0 @@
-$kind: http-request
-name: actualizar
-url: 127.0.0.1:5000/api/metodos_pago/
-method: PUT
-order: 3277035265283792

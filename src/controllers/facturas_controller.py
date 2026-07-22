@@ -16,7 +16,7 @@ class FacturasController:
         
         return factura
 
-
+ 
     @staticmethod
     def create(data):
 
@@ -32,17 +32,17 @@ class FacturasController:
         factura.id_usuario = data["id_usuario"]
         factura.id_metodo_pago = data["id_metodo_pago"]
 
-        factura.save()
+        factura.create()
 
         return factura
-        
+         
     @staticmethod
     def update(id, data):
 
         factura = Facturas.get_by_id(id)
 
         if factura is None:
-            return False
+            return "Factura no encontrada"
 
         factura.numero = data["numero"]
         factura.fecha = data["fecha"]
@@ -57,7 +57,7 @@ class FacturasController:
 
         factura.update()
         
-        return True
+        return factura
 
     @staticmethod
     def delete(id):
@@ -65,8 +65,8 @@ class FacturasController:
         factura = Facturas.get_by_id(id)
        
         if factura is None:
-            return False
+            return "Factura no encontrada"
         
         factura.delete()
         
-        return True
+        return True and "Factura eliminada correctamente"

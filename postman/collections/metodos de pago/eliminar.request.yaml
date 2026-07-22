@@ -1,5 +1,0 @@
-$kind: http-request
-name: eliminar
-url: 127.0.0.1:5000/api/metodos_pago/
-method: DELETE
-order: 4321817719878967

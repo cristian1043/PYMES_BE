@@ -1,0 +1,20 @@
+$kind: http-request
+name: insertar
+url: http://127.0.0.1:5000/api/detalle_facturas
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"cantidad\": 2,\r
+
+    \    \"precio_unitario\": 185000,\r
+
+    \    \"subtotal\": 370000,\r
+
+    \    \"id_factura\": 4,\r
+
+    \    \"id_producto\": 1\r
+
+    }"
+order: 2032808554413190
