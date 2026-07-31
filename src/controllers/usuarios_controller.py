@@ -12,9 +12,8 @@ class UsuariosController:
         return Usuarios.get_by_id(id)
 
     @staticmethod
-    def save(data):
+    def create(data):
         usuario = Usuarios()
-        
         usuario.tipo_documento = data["tipo_documento"]
         usuario.documento = data["documento"]
         usuario.nombre = data["nombre"]
@@ -24,9 +23,7 @@ class UsuariosController:
         usuario.username = data["username"]
         usuario.password_hash = data["password_hash"]
         usuario.id_rol = data["id_rol"]
-        
-        usuario.save()
-        
+        usuario.create()
         return usuario
 
     @staticmethod

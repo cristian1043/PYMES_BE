@@ -34,9 +34,7 @@ def get_usuario(id):
 @usuarios_bp.route("/", methods=["POST"])
 def create_usuario():
     data = request.get_json()
-
-    usuario = UsuariosController.save(data)
-
+    usuario = UsuariosController.create(data)
     return jsonify(usuario.to_dict()), 201
 
 
@@ -46,12 +44,9 @@ def create_usuario():
 @usuarios_bp.route("/<int:id>", methods=["PUT"])
 def update_usuario(id):
     data = request.get_json()
-
     usuario = UsuariosController.update(id, data)
-
     if usuario:
         return jsonify(usuario.to_dict()), 200
-
     return jsonify({
         "mensaje": "Usuario no encontrado"
     }), 404
@@ -62,14 +57,11 @@ def update_usuario(id):
 # ===========================
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
 def delete_usuario(id):
-
     eliminado = UsuariosController.delete(id)
-
     if eliminado:
         return jsonify({
             "mensaje": "Usuario eliminado correctamente"
         }), 200
-
     return jsonify({
         "mensaje": "Usuario no encontrado"
     }), 404

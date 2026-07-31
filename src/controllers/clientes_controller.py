@@ -12,14 +12,14 @@ class ClientesController:
         return Clientes.get_by_id(id)
 
     @staticmethod
-    def save(data):
+    def create(data):
         cliente = Clientes()
         cliente.documento = data["documento"]
         cliente.nombre = data["nombre"]
         cliente.direccion = data["direccion"]
         cliente.telefono = data["telefono"]
         cliente.email = data["email"]
-        cliente.save()
+        cliente.create()
         return cliente
 
     @staticmethod

@@ -19,9 +19,7 @@ class ComprasController:
 
     @staticmethod
     def create(data):
-
         compra = Compras()
-
         compra.numero = data["numero"]
         compra.subtotal = data["subtotal"]
         compra.iva = data["iva"]
@@ -29,19 +27,14 @@ class ComprasController:
         compra.total = data["total"]
         compra.id_proveedor = data["id_proveedor"]
         compra.id_usuario = data["id_usuario"]
-
         compra.create()
-
         return compra
 
     @staticmethod
     def update(id, data):
-
         compra = Compras.get_by_id(id)
-
         if compra is None:
             return "Compra no encontrada"
-
         compra.numero = data["numero"]
         compra.subtotal = data["subtotal"]
         compra.iva = data["iva"]
@@ -49,9 +42,7 @@ class ComprasController:
         compra.total = data["total"]
         compra.id_proveedor = data["id_proveedor"]
         compra.id_usuario = data["id_usuario"]
-
         compra.update()
-
         return compra
 
     @staticmethod

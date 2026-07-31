@@ -29,9 +29,7 @@ def get_factura(id):
 @facturas_bp.route("/", methods=["POST"])
 def create_factura():
     data = request.get_json()
-
     factura = FacturasController.create(data)
-
     return jsonify(factura.to_dict()), 201
 
 # ===========================
@@ -52,14 +50,11 @@ def update_factura(id):
 # ===========================
 @facturas_bp.route("/<int:id>", methods=["DELETE"])
 def delete_factura(id):
-
     eliminado = FacturasController.delete(id)
-
     if eliminado:
         return jsonify({
             "mensaje": "Factura eliminada correctamente"
         }), 200
-
     return jsonify({
         "mensaje": "Factura no encontrada"
     }), 404

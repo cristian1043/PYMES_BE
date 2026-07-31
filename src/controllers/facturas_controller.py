@@ -19,9 +19,7 @@ class FacturasController:
  
     @staticmethod
     def create(data):
-
         factura = Facturas()
-
         factura.numero = data["numero"]
         factura.fecha = data["fecha"]
         factura.subtotal = data["subtotal"]
@@ -31,19 +29,14 @@ class FacturasController:
         factura.id_cliente = data["id_cliente"]
         factura.id_usuario = data["id_usuario"]
         factura.id_metodo_pago = data["id_metodo_pago"]
-
         factura.create()
-
         return factura
          
     @staticmethod
     def update(id, data):
-
         factura = Facturas.get_by_id(id)
-
         if factura is None:
             return "Factura no encontrada"
-
         factura.numero = data["numero"]
         factura.fecha = data["fecha"]
         factura.subtotal = data["subtotal"]
@@ -53,10 +46,7 @@ class FacturasController:
         factura.id_cliente = data["id_cliente"]
         factura.id_usuario = data["id_usuario"]
         factura.id_metodo_pago = data["id_metodo_pago"]
-
-
         factura.update()
-        
         return factura
 
     @staticmethod

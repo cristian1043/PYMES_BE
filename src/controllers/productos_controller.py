@@ -19,9 +19,7 @@ class ProductosController:
 
     @staticmethod
     def create(data):
-
         producto = Productos()
-
         producto.nombre = data["nombre"]
         producto.descripcion = data["descripcion"]
         producto.precio = data["precio"]
@@ -29,19 +27,14 @@ class ProductosController:
         producto.id_categoria = data["id_categoria"]
         producto.codigo = data["codigo"]
         producto.unidad_medida = data["unidad_medida"]
-
         producto.create()
-
         return producto
 
     @staticmethod
     def update(id, data):
-
         producto = Productos.get_by_id(id)
-
         if producto is None:
             return "Producto no encontrado"
-
         producto.nombre = data["nombre"]
         producto.descripcion = data["descripcion"]
         producto.precio = data["precio"]
@@ -49,9 +42,7 @@ class ProductosController:
         producto.id_categoria = data["id_categoria"]
         producto.codigo = data["codigo"]
         producto.unidad_medida = data["unidad_medida"]
-
         producto.update()
-
         return producto
 
 

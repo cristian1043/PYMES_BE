@@ -18,35 +18,26 @@ class DetalleComprasController:
 
     @staticmethod
     def create(data):
-
         detalle = DetalleCompras()
-
         detalle.cantidad = data["cantidad"]
         detalle.costo_unitario = data["costo_unitario"]
         detalle.subtotal = data["subtotal"]
         detalle.id_compra = data["id_compra"]
         detalle.id_producto = data["id_producto"]
-
-        detalle.save()
-
+        detalle.create()
         return detalle
 
     @staticmethod
     def update(id, data):
-
         detalle = DetalleCompras.get_by_id(id)
-
         if detalle is None:
             return None
-
         detalle.cantidad = data["cantidad"]
         detalle.costo_unitario = data["costo_unitario"]
         detalle.subtotal = data["subtotal"]
         detalle.id_compra = data["id_compra"]
         detalle.id_producto = data["id_producto"]
-
         detalle.update()
-
         return detalle
 
     @staticmethod

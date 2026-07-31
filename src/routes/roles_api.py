@@ -19,10 +19,8 @@ def get_roles():
 @roles_bp.route("/<int:id>", methods=["GET"])
 def get_rol(id):
     rol = RolesController.get_by_id(id)
-
     if rol:
         return jsonify(rol.to_dict()), 200
-
     return jsonify({
         "mensaje": "Rol no encontrado"
     }), 404
@@ -34,9 +32,7 @@ def get_rol(id):
 @roles_bp.route("/", methods=["POST"])
 def create_rol():
     data = request.get_json()
-
-    rol = RolesController.save(data)
-
+    rol = RolesController.create(data)
     return jsonify(rol.to_dict()), 201
 
 

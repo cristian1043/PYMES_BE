@@ -12,15 +12,11 @@ class MetodosPagoController:
         return MetodosPago.get_by_id(id)
 
     @staticmethod
-    def save(data):
-
+    def create(data):
         metodo = MetodosPago()
-
         metodo.nombre = data["nombre"]
         metodo.descripcion = data.get("descripcion")
-
-        metodo.save()
-
+        metodo.create()
         return metodo
 
     @staticmethod

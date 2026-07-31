@@ -29,7 +29,7 @@ def get_metodo_pago_by_id(id):
 @metodos_pago_bp.route("/", methods=["POST"])
 def create_metodo_pago():
     data = request.get_json()
-    metodos_pago = MetodosPagoController.save(data)
+    metodos_pago = MetodosPagoController.create(data)
     return jsonify(metodos_pago.to_dict()), 201
 
 #==========================

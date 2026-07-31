@@ -34,9 +34,7 @@ def get_proveedor(id):
 @proveedores_bp.route("/", methods=["POST"])
 def create_proveedor():
     data = request.get_json()
-
-    proveedor = ProveedoresController.save(data)
-
+    proveedor = ProveedoresController.create(data)
     return jsonify(proveedor.to_dict()), 201
 
 
@@ -46,12 +44,9 @@ def create_proveedor():
 @proveedores_bp.route("/<int:id>", methods=["PUT"])
 def update_proveedor(id):
     data = request.get_json()
-
     proveedor = ProveedoresController.update(id, data)
-
     if proveedor:
         return jsonify(proveedor.to_dict()), 200
-
     return jsonify({
         "mensaje": "Proveedor no encontrado"
     }), 404
@@ -62,14 +57,11 @@ def update_proveedor(id):
 # ===========================
 @proveedores_bp.route("/<int:id>", methods=["DELETE"])
 def delete_proveedor(id):
-
     eliminado = ProveedoresController.delete(id)
-
     if eliminado:
         return jsonify({
             "mensaje": "Proveedor eliminado correctamente"
         }), 200
-
     return jsonify({
         "mensaje": "Proveedor no encontrado"
     }), 404

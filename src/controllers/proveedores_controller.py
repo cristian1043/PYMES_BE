@@ -12,31 +12,27 @@ class ProveedoresController:
         return Proveedores.get_by_id(id)
 
     @staticmethod
-    def save(data):
+    def create(data):
         proveedor = Proveedores()
         proveedor.nit = data["nit"]
         proveedor.nombre = data["nombre"]
         proveedor.telefono = data["telefono"]
         proveedor.direccion = data["direccion"]
         proveedor.email = data["email"]
-        proveedor.save()
+        proveedor.create()
         return proveedor
 
     @staticmethod
     def update(id, data):
         proveedor = Proveedores.get_by_id(id)
-
         if proveedor is None:
             return None
-
         proveedor.nit = data["nit"]
         proveedor.nombre = data["nombre"]
         proveedor.telefono = data["telefono"]
         proveedor.direccion = data["direccion"]
         proveedor.email = data["email"]
-
         proveedor.update()
-
         return proveedor
 
     @staticmethod

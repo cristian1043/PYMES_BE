@@ -27,15 +27,15 @@ def get_cliente(id):
         "mensaje": "Cliente no encontrado"
     }), 404
 
-
+ 
 # ===========================
 # Crear cliente
 # ===========================
 @clientes_bp.route("/", methods=["POST"])
 def create_cliente():
     data = request.get_json()
-    cliente = ClientesController.save(data)
-    return jsonify(cliente.to_dict()), 
+    cliente = ClientesController.create(data)
+    return jsonify(cliente.to_dict()), 201
 
 
 # ===========================
@@ -44,12 +44,9 @@ def create_cliente():
 @clientes_bp.route("/<int:id>", methods=["PUT"])
 def update_cliente(id):
     data = request.get_json()
-
     cliente = ClientesController.update(id, data)
-
     if cliente:
         return jsonify(cliente.to_dict()), 200
-
     return jsonify({
         "mensaje": "Cliente no encontrado"
     }), 404

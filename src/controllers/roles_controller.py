@@ -11,25 +11,21 @@ class RolesController:
         return Roles.get_by_id(id)
 
     @staticmethod
-    def save(data):
+    def create(data):
         rol = Roles()
         rol.nombre = data["nombre"]
         rol.descripcion = data["descripcion"]
-        rol.save()
+        rol.create()
         return rol
 
     @staticmethod
     def update(id, data):
         rol = Roles.get_by_id(id)
-
         if rol is None:
             return None
-
         rol.nombre = data["nombre"]
         rol.descripcion = data["descripcion"]
-
         rol.update()
-
         return rol
 
     @staticmethod
