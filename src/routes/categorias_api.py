@@ -1,4 +1,4 @@
-0from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify
 from src.controllers.categorias_controller import CategoriasController
 
 categorias_bp = Blueprint("categorias", __name__)
