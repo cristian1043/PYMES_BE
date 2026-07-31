@@ -4,9 +4,5 @@ url: http://127.0.0.1:5000/api/categorias
 method: POST
 body:
   type: json
-  content: "{\r
-
-    \    \"nombre\": \"Verduras\"\r
-
-    }"
+  content: "{\r\n    \"nombre\": \"Calzado\"\r\n}"
 order: 4433890884401814

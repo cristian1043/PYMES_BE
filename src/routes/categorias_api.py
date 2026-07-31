@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+0from flask import Blueprint, request, jsonify
 from src.controllers.categorias_controller import CategoriasController
 
 categorias_bp = Blueprint("categorias", __name__)
@@ -34,7 +34,7 @@ def get_categoria(id):
 def create_categoria():
     data = request.get_json()
 
-    categoria = CategoriasController.save(data)
+    categoria = CategoriasController.create(data)
     
     print(data)
 
