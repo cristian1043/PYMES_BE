@@ -1,18 +1,41 @@
+from sqlalchemy import text
+from src.models import session, engine
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
 
 class UsuariosController:
 
     @staticmethod
+    def _asegurar_columnas_tabla():
+        """Asegura que las columnas 'username' y 'estado' existan en la tabla usuarios de MySQL."""
+        try:
+            with engine.connect() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN username VARCHAR(50) UNIQUE"))
+                    conn.commit()
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'"))
+                    conn.commit()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    @staticmethod
     def get():
+        UsuariosController._asegurar_columnas_tabla()
         return Usuarios.get()
 
     @staticmethod
     def get_by_id(id):
+        UsuariosController._asegurar_columnas_tabla()
         return Usuarios.get_by_id(id)
 
     @staticmethod
     def create(data):
+        UsuariosController._asegurar_columnas_tabla()
         id_rol = data.get("id_rol", 1)
         rol_existente = Roles.get_by_id(id_rol)
         if not rol_existente:
@@ -43,6 +66,7 @@ class UsuariosController:
 
     @staticmethod
     def update(id, data):
+        UsuariosController._asegurar_columnas_tabla()
         usuario = Usuarios.get_by_id(id)
 
         if usuario is None:
