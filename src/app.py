@@ -1,8 +1,7 @@
 from flask import Flask
 from src.models import Base, engine
 
-#importar los modelos para que se registren en la base de datos
-
+# Importar los modelos para que se registren en la base de datos
 from src.models.categorias import Categorias
 from src.models.clientes import Clientes
 from src.models.productos import Productos
@@ -14,12 +13,10 @@ from src.models.facturas import Facturas
 from src.models.detalle_facturas import DetalleFacturas
 from src.models.compras import Compras
 from src.models.detalle_compras import DetalleCompras
+from src.models.empresas import Empresas
 
-
-#crear todas las tablas en la base de datos
-
+# Crear todas las tablas en la base de datos
 Base.metadata.create_all(bind=engine)
-
 
 app = Flask(__name__)
 
@@ -34,13 +31,13 @@ from src.routes import (
     detalle_facturas_bp, 
     compras_bp, 
     detalle_compras_bp,
-    metodos_pago_bp
+    metodos_pago_bp,
+    reportes_bp,
+    empresas_bp
 )
 
-
-# Register all blueprints
-
-app.register_blueprint(categorias_bp,url_prefix="/api/categorias")
+# Registrar todos los Blueprints
+app.register_blueprint(categorias_bp, url_prefix="/api/categorias")
 app.register_blueprint(clientes_bp, url_prefix="/api/clientes")
 app.register_blueprint(productos_bp, url_prefix="/api/productos")
 app.register_blueprint(proveedores_bp, url_prefix="/api/proveedores")
@@ -51,6 +48,8 @@ app.register_blueprint(detalle_facturas_bp, url_prefix="/api/detalle_facturas")
 app.register_blueprint(compras_bp, url_prefix="/api/compras")
 app.register_blueprint(detalle_compras_bp, url_prefix="/api/detalle_compras")
 app.register_blueprint(metodos_pago_bp, url_prefix="/api/metodos_pago")
+app.register_blueprint(reportes_bp, url_prefix="/api/reportes")
+app.register_blueprint(empresas_bp, url_prefix="/api/empresas")
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -9,4 +9,5 @@ from .detalle_facturas_api import detalle_facturas_bp
 from .compras_api import compras_bp
 from .detalle_compras_api import detalle_compras_bp
 from .metodos_pago_api import metodos_pago_bp
- 
+from .reportes_api import reportes_bp
+from .empresas_api import empresas_bp
