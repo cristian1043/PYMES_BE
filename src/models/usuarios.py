@@ -15,6 +15,9 @@ class Usuarios(Base):
     password_hash = Column(String(255), nullable=False)
     id_rol = Column(Integer, ForeignKey("roles.id"), nullable=False)
     estado = Column(String(20), default="Activo", nullable=True)
+    banco = Column(String(100), nullable=True)
+    tipo_cuenta = Column(String(50), nullable=True)
+    numero_cuenta = Column(String(50), nullable=True)
 
     def save(self):
         session.add(self)
@@ -47,5 +50,8 @@ class Usuarios(Base):
             "username": self.username,
             "password_hash": self.password_hash,
             "id_rol": self.id_rol,
-            "estado": self.estado or "Activo"
+            "estado": self.estado or "Activo",
+            "banco": self.banco or "",
+            "tipo_cuenta": self.tipo_cuenta or "",
+            "numero_cuenta": self.numero_cuenta or ""
         }

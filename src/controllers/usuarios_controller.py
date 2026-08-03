@@ -1,41 +1,25 @@
-from sqlalchemy import text
-from src.models import session, engine
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
+from src.utils.migrations import DatabaseMigrations
 
 class UsuariosController:
-
-    @staticmethod
-    def _asegurar_columnas_tabla():
-        """Asegura que las columnas 'username' y 'estado' existan en la tabla usuarios de MySQL."""
-        try:
-            with engine.connect() as conn:
-                try:
-                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN username VARCHAR(50) UNIQUE"))
-                    conn.commit()
-                except Exception:
-                    pass
-                try:
-                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'"))
-                    conn.commit()
-                except Exception:
-                    pass
-        except Exception:
-            pass
+    """
+    Controlador encargado única y exclusivamente de la Lógica de Negocio de Usuarios (SRP).
+    """
 
     @staticmethod
     def get():
-        UsuariosController._asegurar_columnas_tabla()
+        DatabaseMigrations.ejecutar_migraciones()
         return Usuarios.get()
 
     @staticmethod
     def get_by_id(id):
-        UsuariosController._asegurar_columnas_tabla()
+        DatabaseMigrations.ejecutar_migraciones()
         return Usuarios.get_by_id(id)
 
     @staticmethod
     def create(data):
-        UsuariosController._asegurar_columnas_tabla()
+        DatabaseMigrations.ejecutar_migraciones()
         id_rol = data.get("id_rol", 1)
         rol_existente = Roles.get_by_id(id_rol)
         if not rol_existente:
@@ -60,13 +44,16 @@ class UsuariosController:
         usuario.password_hash = data["password_hash"]
         usuario.id_rol = id_rol
         usuario.estado = data.get("estado", "Activo")
+        usuario.banco = data.get("banco", "")
+        usuario.tipo_cuenta = data.get("tipo_cuenta", "")
+        usuario.numero_cuenta = data.get("numero_cuenta", "")
         
         usuario.save()
         return usuario
 
     @staticmethod
     def update(id, data):
-        UsuariosController._asegurar_columnas_tabla()
+        DatabaseMigrations.ejecutar_migraciones()
         usuario = Usuarios.get_by_id(id)
 
         if usuario is None:
@@ -92,6 +79,12 @@ class UsuariosController:
             usuario.id_rol = int(data["id_rol"])
         if "estado" in data:
             usuario.estado = data["estado"]
+        if "banco" in data:
+            usuario.banco = data["banco"]
+        if "tipo_cuenta" in data:
+            usuario.tipo_cuenta = data["tipo_cuenta"]
+        if "numero_cuenta" in data:
+            usuario.numero_cuenta = data["numero_cuenta"]
 
         usuario.update()
         return usuario

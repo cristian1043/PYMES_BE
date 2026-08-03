@@ -1,5 +1,6 @@
 from flask import Flask
 from src.models import Base, engine
+from src.utils.migrations import DatabaseMigrations
 
 # Importar los modelos para que se registren en la base de datos
 from src.models.categorias import Categorias
@@ -14,9 +15,11 @@ from src.models.detalle_facturas import DetalleFacturas
 from src.models.compras import Compras
 from src.models.detalle_compras import DetalleCompras
 from src.models.empresas import Empresas
+from src.models.usuario_empresas import UsuarioEmpresas
 
-# Crear todas las tablas en la base de datos
+# Crear todas las tablas y ejecutar migraciones en la base de datos
 Base.metadata.create_all(bind=engine)
+DatabaseMigrations.ejecutar_migraciones()
 
 app = Flask(__name__)
 
@@ -33,7 +36,8 @@ from src.routes import (
     detalle_compras_bp,
     metodos_pago_bp,
     reportes_bp,
-    empresas_bp
+    empresas_bp,
+    usuario_empresas_bp
 )
 
 # Registrar todos los Blueprints
@@ -50,6 +54,7 @@ app.register_blueprint(detalle_compras_bp, url_prefix="/api/detalle_compras")
 app.register_blueprint(metodos_pago_bp, url_prefix="/api/metodos_pago")
 app.register_blueprint(reportes_bp, url_prefix="/api/reportes")
 app.register_blueprint(empresas_bp, url_prefix="/api/empresas")
+app.register_blueprint(usuario_empresas_bp, url_prefix="/api/usuario_empresas")
 
 if __name__ == '__main__':
     app.run(debug=True)
