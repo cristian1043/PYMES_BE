@@ -1,9 +1,11 @@
 from src.models.empresas import Empresas
+from src.utils.migrations import DatabaseMigrations
 
 class EmpresasController:
 
     @staticmethod
     def get():
+        DatabaseMigrations.ejecutar_migraciones()
         empresas = Empresas.get()
         if not empresas:
             emp1 = Empresas()
@@ -12,6 +14,7 @@ class EmpresasController:
             emp1.direccion = "Calle 10 #20-30"
             emp1.telefono = "+57 300 1234567"
             emp1.email = "contacto@chaneques.com"
+            emp1.estado = "Activo"
             emp1.save()
 
             emp2 = Empresas()
@@ -20,6 +23,7 @@ class EmpresasController:
             emp2.direccion = "Carrera 45 #12-34"
             emp2.telefono = "+57 315 9876543"
             emp2.email = "contacto@lavainilla.com"
+            emp2.estado = "Activo"
             emp2.save()
 
             empresas = [emp1, emp2]
@@ -27,21 +31,25 @@ class EmpresasController:
 
     @staticmethod
     def get_by_id(id):
+        DatabaseMigrations.ejecutar_migraciones()
         return Empresas.get_by_id(id)
 
     @staticmethod
     def create(data):
+        DatabaseMigrations.ejecutar_migraciones()
         empresa = Empresas()
         empresa.nombre = data["nombre"]
         empresa.nit = data["nit"]
         empresa.direccion = data.get("direccion", "")
         empresa.telefono = data.get("telefono", "")
         empresa.email = data.get("email", "")
+        empresa.estado = data.get("estado", "Activo")
         empresa.save()
         return empresa
 
     @staticmethod
     def update(id, data):
+        DatabaseMigrations.ejecutar_migraciones()
         empresa = Empresas.get_by_id(id)
         if not empresa:
             return None
@@ -56,6 +64,8 @@ class EmpresasController:
             empresa.telefono = data["telefono"]
         if "email" in data:
             empresa.email = data["email"]
+        if "estado" in data:
+            empresa.estado = data["estado"]
 
         empresa.update()
         return empresa

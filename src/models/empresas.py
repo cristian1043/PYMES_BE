@@ -10,6 +10,7 @@ class Empresas(Base):
     direccion = Column(String(255), nullable=True)
     telefono = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
+    estado = Column(String(20), default="Activo", nullable=True)
 
     def save(self):
         session.add(self)
@@ -37,5 +38,6 @@ class Empresas(Base):
             "nit": self.nit,
             "direccion": self.direccion,
             "telefono": self.telefono,
-            "email": self.email
+            "email": self.email,
+            "estado": self.estado or "Activo"
         }

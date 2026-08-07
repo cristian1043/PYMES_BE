@@ -25,5 +25,12 @@ class DatabaseMigrations:
                         conn.commit()
                     except Exception:
                         pass
+
+                # Columnas adicionales para la tabla empresas
+                try:
+                    conn.execute(text("ALTER TABLE empresas ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'"))
+                    conn.commit()
+                except Exception:
+                    pass
         except Exception:
             pass
