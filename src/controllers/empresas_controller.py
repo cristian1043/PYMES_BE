@@ -37,9 +37,13 @@ class EmpresasController:
     @staticmethod
     def create(data):
         DatabaseMigrations.ejecutar_migraciones()
+        nit = data.get("nit")
+        if nit and session.query(Empresas).filter_by(nit=nit).first():
+            raise Exception(f"Ya existe una empresa registrada con el NIT '{nit}'.")
+
         empresa = Empresas()
         empresa.nombre = data["nombre"]
-        empresa.nit = data["nit"]
+        empresa.nit = nit
         empresa.direccion = data.get("direccion", "")
         empresa.telefono = data.get("telefono", "")
         empresa.email = data.get("email", "")
