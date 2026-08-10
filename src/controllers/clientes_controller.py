@@ -1,11 +1,15 @@
 from src.models.clientes import Clientes
-
+from src.utils.pagination import paginate_query
 
 class ClientesController:
 
     @staticmethod
     def get():
         return Clientes.get()
+
+    @staticmethod
+    def get_paginated(page=1, per_page=10):
+        return paginate_query(Clientes.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):

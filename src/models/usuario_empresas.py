@@ -22,6 +22,10 @@ class UsuarioEmpresas(Base):
     def get_by_usuario_empresa(usuario_id, empresa_id):
         return session.query(UsuarioEmpresas).filter_by(usuario_id=usuario_id, empresa_id=empresa_id).first()
 
+    @staticmethod
+    def get_by_usuario_id(usuario_id):
+        return session.query(UsuarioEmpresas).filter_by(usuario_id=usuario_id).all()
+
     def update(self):
         session.commit()
 

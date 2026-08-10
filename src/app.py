@@ -1,4 +1,10 @@
+import os
 from flask import Flask
+from flask_jwt_extended import JWTManager
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 from src.models import Base, engine
 from src.utils.migrations import DatabaseMigrations
 
@@ -23,7 +29,14 @@ DatabaseMigrations.ejecutar_migraciones()
 
 app = Flask(__name__)
 
+# Configuración de Seguridad y JWT
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "pymes-jwt-secret-key-2026-key")
+jwt = JWTManager(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+limiter = Limiter(get_remote_address, app=app, default_limits=["500 per day", "100 per hour"])
+
 from src.routes import (
+    auth_bp,
     categorias_bp,
     clientes_bp, 
     productos_bp, 
@@ -41,6 +54,7 @@ from src.routes import (
 )
 
 # Registrar todos los Blueprints
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(categorias_bp, url_prefix="/api/categorias")
 app.register_blueprint(clientes_bp, url_prefix="/api/clientes")
 app.register_blueprint(productos_bp, url_prefix="/api/productos")

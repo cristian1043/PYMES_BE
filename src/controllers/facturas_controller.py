@@ -1,11 +1,16 @@
 from datetime import datetime
 from src.models.facturas import Facturas
+from src.utils.pagination import paginate_query
 
 class FacturasController:
 
     @staticmethod
     def get():
         return Facturas.get()
+
+    @staticmethod
+    def get_paginated(page=1, per_page=10):
+        return paginate_query(Facturas.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):

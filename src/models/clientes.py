@@ -22,6 +22,10 @@ class Clientes(Base):
         return session.query(Clientes).all()
 
     @staticmethod
+    def get_query():
+        return session.query(Clientes)
+
+    @staticmethod
     def get_by_id(id):
         return session.query(Clientes).filter_by(id=id).first()
 

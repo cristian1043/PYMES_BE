@@ -1,22 +1,27 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from src.controllers.usuarios_controller import UsuariosController
 from src.models import session
+from src.utils.pagination import get_pagination_params
+from src.utils.security import roles_required
 
 usuarios_bp = Blueprint("usuarios", __name__)
 
 
 # ===========================
-# Obtener todos los usuarios
+# Obtener todos los usuarios (paginado)
 # ===========================
 @usuarios_bp.route("/", methods=["GET"])
+@jwt_required(optional=True)
 def get_usuarios():
     try:
-        usuarios = UsuariosController.get()
-        return jsonify([c.to_dict() for c in usuarios]), 200
+        page, per_page = get_pagination_params()
+        resultado = UsuariosController.get_paginated(page, per_page)
+        return jsonify(resultado), 200
     except Exception as e:
         session.rollback()
         print(f"Error en GET usuarios: {str(e)}")
-        return jsonify([]), 200
+        return jsonify({"items": [], "total": 0, "page": 1, "per_page": 10, "total_pages": 0}), 200
 
 
 # ===========================

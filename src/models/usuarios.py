@@ -28,8 +28,18 @@ class Usuarios(Base):
         return session.query(Usuarios).all()
 
     @staticmethod
+    def get_query():
+        return session.query(Usuarios)
+
+    @staticmethod
     def get_by_id(id):
         return session.query(Usuarios).filter_by(id=id).first()
+
+    @staticmethod
+    def get_by_login(login_val):
+        return session.query(Usuarios).filter(
+            (Usuarios.email == login_val) | (Usuarios.username == login_val)
+        ).first()
 
     def update(self):
         session.commit()
@@ -48,7 +58,6 @@ class Usuarios(Base):
             "telefono": self.telefono,
             "email": self.email,
             "username": self.username,
-            "password_hash": self.password_hash,
             "id_rol": self.id_rol,
             "estado": self.estado or "Activo",
             "banco": self.banco or "",

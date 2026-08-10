@@ -24,6 +24,10 @@ class Productos(Base):
         return session.query(Productos).all()
 
     @staticmethod
+    def get_query():
+        return session.query(Productos)
+
+    @staticmethod
     def get_by_id(id):
         return session.query(Productos).filter_by(id=id).first()
 

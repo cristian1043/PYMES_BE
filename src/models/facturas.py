@@ -28,6 +28,10 @@ class Facturas(Base):
     @staticmethod
     def get():
         return session.query(Facturas).all()
+
+    @staticmethod
+    def get_query():
+        return session.query(Facturas)
  
     @staticmethod
     def get_by_id(id):

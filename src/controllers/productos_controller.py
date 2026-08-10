@@ -1,11 +1,15 @@
 from src.models.productos import Productos
+from src.utils.pagination import paginate_query
 
- 
 class ProductosController:
 
     @staticmethod
     def get():
         return Productos.get()
+
+    @staticmethod
+    def get_paginated(page=1, per_page=10):
+        return paginate_query(Productos.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):

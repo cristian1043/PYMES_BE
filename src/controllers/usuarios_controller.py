@@ -1,6 +1,8 @@
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
 from src.utils.migrations import DatabaseMigrations
+from src.utils.security import hash_password
+from src.utils.pagination import paginate_query
 
 class UsuariosController:
     """
@@ -11,6 +13,11 @@ class UsuariosController:
     def get():
         DatabaseMigrations.ejecutar_migraciones()
         return Usuarios.get()
+
+    @staticmethod
+    def get_paginated(page=1, per_page=10):
+        DatabaseMigrations.ejecutar_migraciones()
+        return paginate_query(Usuarios.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):
@@ -33,6 +40,8 @@ class UsuariosController:
         if not username:
             username = data["email"].split("@")[0]
 
+        raw_password = data.get("password") or data.get("password_hash", "123456")
+        
         usuario = Usuarios()
         usuario.tipo_documento = data["tipo_documento"]
         usuario.documento = data["documento"]
@@ -41,7 +50,7 @@ class UsuariosController:
         usuario.telefono = data["telefono"]
         usuario.email = data["email"]
         usuario.username = username
-        usuario.password_hash = data["password_hash"]
+        usuario.password_hash = hash_password(raw_password)
         usuario.id_rol = id_rol
         usuario.estado = data.get("estado", "Activo")
         usuario.banco = data.get("banco", "")
@@ -73,8 +82,10 @@ class UsuariosController:
             usuario.email = data["email"]
         if "username" in data:
             usuario.username = data["username"]
-        if "password_hash" in data:
-            usuario.password_hash = data["password_hash"]
+        if "password" in data:
+            usuario.password_hash = hash_password(data["password"])
+        elif "password_hash" in data:
+            usuario.password_hash = hash_password(data["password_hash"])
         if "id_rol" in data:
             usuario.id_rol = int(data["id_rol"])
         if "estado" in data:
