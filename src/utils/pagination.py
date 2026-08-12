@@ -26,6 +26,9 @@ def paginate_query(query, page=1, per_page=10, transform_fn=None):
     Aplica paginación (LIMIT y OFFSET) a una consulta de SQLAlchemy y construye
     la estructura JSON estandarizada.
     """
+    from src.models import session
+    session.commit()
+    session.expire_all()
     total = query.count()
     total_pages = math.ceil(total / per_page) if per_page > 0 else 1
     
