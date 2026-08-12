@@ -1,6 +1,8 @@
 $kind: http-request
 name: obtener por id
-url: http://127.0.0.1:5000/api/compras/1
+url: {{base_url}}/compras/1
 method: GET
-examples: .resources/obtener por id.resources/examples
-order: 4055152817779777
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000020000

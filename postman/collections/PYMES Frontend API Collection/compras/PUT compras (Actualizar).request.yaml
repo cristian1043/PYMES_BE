@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/compras/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "id_proveedor": 1,
+        "id_metodo_pago": 1,
+        "detalles": [
+            {
+                "id_producto": 1,
+                "cantidad": 10,
+                "precio_unitario": 15000.0
+            }
+        ]
+    }
+order: 4000

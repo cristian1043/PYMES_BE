@@ -1,28 +1,12 @@
 $kind: http-request
 name: actualizar
-url: http://127.0.0.1:5000/api/usuarios/1
+url: {{base_url}}/usuarios/1
 method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"tipo_documento\": \"CC\",\r
-
-    \    \"documento\": \"1001234567\",\r
-
-    \    \"nombre\": \"Cristian\",\r
-
-    \    \"apellido\": \"Jimenez\",\r
-
-    \    \"telefono\": \"3001234568\",\r
-
-    \    \"email\": \"cristian@pymesoft.com\",\r
-
-    \    \"username\": \"cristianjg\",\r
-
-    \    \"password_hash\": \"123456\",\r
-
-    \    \"id_rol\": 1\r
-
-    }"
-order: 1198180529632731
+  content: "{\r\n    \"tipo_documento\": \"CC\",\r\n    \"documento\": \"1002345678\",\r\n    \"nombre\": \"Juan Carlos\",\r\n    \"apellido\": \"Gómez\",\r\n    \"email\": \"juan.gomez@pymesoft.com\",\r\n    \"telefono\": \"3112223344\",\r\n    \"id_rol\": 2\r\n}"
+order: 1000000000032000

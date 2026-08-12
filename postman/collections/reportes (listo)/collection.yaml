@@ -1,0 +1,12 @@
+$kind: collection
+name: Reportes
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+order:
+  - 'obtener reportes ventas'
+  - 'obtener top productos'
+  - 'obtener reporte clientes'
+  - 'obtener reporte inventario'

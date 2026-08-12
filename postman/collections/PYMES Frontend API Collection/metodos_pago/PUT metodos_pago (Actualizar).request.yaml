@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/metodos_pago/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nombre": "Transferencia Bancaria",
+        "descripcion": "Pago mediante Nequi / Bancolombia"
+    }
+order: 4000

@@ -1,0 +1,15 @@
+$kind: http-request
+name: obtener vinculacion empresa
+url: '{{base_url}}/usuario_empresas/vinculacion'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{token}}'
+  - key: X-Empresa-ID
+    value: '{{empresa_id}}'
+queryParams:
+  - key: usuario_id
+    value: '1'
+  - key: empresa_id
+    value: '{{empresa_id}}'
+order: 1000000000034000

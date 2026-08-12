@@ -1,0 +1,11 @@
+$kind: http-request
+name: actualizar
+url: {{base_url}}/empresas/1
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r\n    \"nit\": \"901234567-8\",\r\n    \"nombre\": \"Mi Pyme Ejemplo Actualizada\",\r\n    \"direccion\": \"Av Principal 200\",\r\n    \"telefono\": \"6015554321\",\r\n    \"email\": \"contacto@mipyme.com\",\r\n    \"estado\": \"Activo\"\r\n}"
+order: 1000000000037000

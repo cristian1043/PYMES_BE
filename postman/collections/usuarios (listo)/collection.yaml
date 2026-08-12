@@ -1,0 +1,16 @@
+$kind: collection
+name: Usuarios
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+order:
+  - obtener
+  - 'obtener por id'
+  - insertar
+  - actualizar
+  - eliminar
+  - 'obtener vinculacion empresa'
+  - 'actualizar vinculacion empresa'
+  - 'obtener roles'

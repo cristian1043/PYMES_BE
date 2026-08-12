@@ -1,5 +1,7 @@
 $kind: http-request
 name: eliminar
-url: 127.0.0.1:5000/api/metodos_pago/5
+url: {{base_url}}/metodos_pago/1
 method: DELETE
-order: 4321817719878967
+headers:
+  Authorization: Bearer {{token}}
+order: 1000000000047000

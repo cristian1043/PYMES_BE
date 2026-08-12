@@ -1,0 +1,10 @@
+$kind: http-request
+name: obtener reporte clientes
+url: '{{base_url}}/reportes/clientes'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{token}}'
+  - key: X-Empresa-ID
+    value: '{{empresa_id}}'
+order: 1000000000049000

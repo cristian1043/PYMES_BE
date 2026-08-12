@@ -1,28 +1,12 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/facturas
+url: {{base_url}}/facturas
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"numero\": \"FAC-002\",\r
-
-    \    \"fecha\": \"2026-07-21 23:40:00\",\r
-
-    \    \"subtotal\": 230000,\r
-
-    \    \"iva\": 43700,\r
-
-    \    \"descuento\": 0,\r
-
-    \    \"total\": 273700,\r
-
-    \    \"id_cliente\": 2,\r
-
-    \    \"id_usuario\": 1,\r
-
-    \    \"id_metodo_pago\": 2\r
-
-    }"
-order: 4164193642695334
+  content: "{\r\n    \"id_cliente\": 1,\r\n    \"id_metodo_pago\": 1,\r\n    \"detalles\": [\r\n        {\r\n            \"id_producto\": 1,\r\n            \"cantidad\": 2,\r\n            \"precio_unitario\": 25000.0\r\n        }\r\n    ]\r\n}"
+order: 1000000000026000

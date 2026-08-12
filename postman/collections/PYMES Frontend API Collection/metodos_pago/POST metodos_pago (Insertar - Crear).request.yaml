@@ -1,0 +1,15 @@
+$kind: http-request
+name: POST metodos_pago (Insertar / Crear)
+url: "{{base_url}}/metodos_pago"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nombre": "Transferencia Bancaria",
+        "descripcion": "Pago mediante Nequi / Bancolombia"
+    }
+order: 3000

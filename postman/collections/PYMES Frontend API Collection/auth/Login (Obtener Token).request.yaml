@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+        "username": "admin@pymesoft.com",
+        "password": "123456"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      const json = pm.response.json();
+      if (json.access_token) {
+          pm.environment.set("token", json.access_token);
+          pm.collectionVariables.set("token", json.access_token);
+      }
+order: 1000

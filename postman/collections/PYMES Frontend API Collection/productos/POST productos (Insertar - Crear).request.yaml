@@ -1,0 +1,19 @@
+$kind: http-request
+name: POST productos (Insertar / Crear)
+url: "{{base_url}}/productos"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nombre": "Producto Ejemplo",
+        "descripcion": "Descripci\u00f3n del producto de prueba",
+        "precio": 25000.0,
+        "stock": 50,
+        "id_categoria": 1
+    }
+order: 3000

@@ -1,0 +1,23 @@
+$kind: http-request
+name: POST usuarios (Insertar / Crear)
+url: "{{base_url}}/usuarios"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "tipo_documento": "CC",
+        "documento": "1002345678",
+        "nombre": "Juan",
+        "apellido": "G\u00f3mez",
+        "email": "juan@pymesoft.com",
+        "telefono": "3112223344",
+        "username": "juangomez",
+        "password_hash": "123456",
+        "id_rol": 2
+    }
+order: 3000

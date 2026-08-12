@@ -1,0 +1,12 @@
+$kind: collection
+name: Empresas
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+order:
+  - obtener
+  - 'obtener por id'
+  - insertar
+  - actualizar

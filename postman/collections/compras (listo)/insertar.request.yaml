@@ -1,24 +1,12 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/compras
+url: {{base_url}}/compras
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"numero\": \"COMP-003\",\r
-
-    \    \"subtotal\": 460000,\r
-
-    \    \"iva\": 19000,\r
-
-    \    \"descuento\": 4000,\r
-
-    \    \"total\": 475000,\r
-
-    \    \"id_proveedor\": 1,\r
-
-    \    \"id_usuario\": 1\r
-
-    }"
-order: 4080178134513480
+  content: "{\r\n    \"id_proveedor\": 1,\r\n    \"id_metodo_pago\": 1,\r\n    \"detalles\": [\r\n        {\r\n            \"id_producto\": 1,\r\n            \"cantidad\": 10,\r\n            \"precio_unitario\": 15000.0\r\n        }\r\n    ]\r\n}"
+order: 1000000000021000

@@ -1,0 +1,8 @@
+$kind: collection
+name: Auth
+auth:
+  type: noauth
+order:
+  - login
+  - registro
+  - perfil

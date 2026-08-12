@@ -1,0 +1,10 @@
+$kind: http-request
+name: obtener roles
+url: '{{base_url}}/roles/'
+method: GET
+headers:
+  - key: Authorization
+    value: 'Bearer {{token}}'
+  - key: X-Empresa-ID
+    value: '{{empresa_id}}'
+order: 1000000000036000

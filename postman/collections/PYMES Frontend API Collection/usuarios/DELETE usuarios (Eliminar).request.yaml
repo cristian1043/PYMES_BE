@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/usuarios/1"
+method: DELETE
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+order: 5000

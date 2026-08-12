@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/clientes/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "tipo_documento": "CC",
+        "documento": "123456789",
+        "nombre": "Cliente Ejemplo",
+        "apellido": "Prueba",
+        "email": "cliente@test.com",
+        "telefono": "3001234567",
+        "direccion": "Calle 123 #45-67"
+    }
+order: 4000

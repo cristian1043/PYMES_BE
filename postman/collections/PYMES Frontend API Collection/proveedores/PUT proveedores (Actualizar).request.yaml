@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/proveedores/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nit_rut": "900123456-1",
+        "nombre": "Proveedor Ejemplo S.A.S",
+        "contacto": "Carlos P\u00e9rez",
+        "telefono": "3109876543",
+        "email": "contacto@proveedor.com",
+        "direccion": "Zona Industrial Lote 4"
+    }
+order: 4000

@@ -1,0 +1,11 @@
+$kind: http-request
+name: insertar
+url: {{base_url}}/empresas
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r\n    \"nit\": \"901234567-8\",\r\n    \"nombre\": \"Mi Pyme Ejemplo S.A.S\",\r\n    \"direccion\": \"Av Principal 100\",\r\n    \"telefono\": \"6015551234\",\r\n    \"email\": \"contacto@mipyme.com\",\r\n    \"estado\": \"Activo\"\r\n}"
+order: 1000000000036000

@@ -1,0 +1,7 @@
+$kind: http-request
+name: obtener por id
+url: {{base_url}}/empresas/1
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+order: 1000000000035000

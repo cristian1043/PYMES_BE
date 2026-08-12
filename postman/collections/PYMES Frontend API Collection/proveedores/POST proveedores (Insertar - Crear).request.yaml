@@ -1,0 +1,20 @@
+$kind: http-request
+name: POST proveedores (Insertar / Crear)
+url: "{{base_url}}/proveedores"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nit_rut": "900123456-1",
+        "nombre": "Proveedor Ejemplo S.A.S",
+        "contacto": "Carlos P\u00e9rez",
+        "telefono": "3109876543",
+        "email": "contacto@proveedor.com",
+        "direccion": "Zona Industrial Lote 4"
+    }
+order: 3000

@@ -1,10 +1,12 @@
 $kind: http-request
 name: actualizar
-url: http://127.0.0.1:5000/api/clientes/1
+url: {{base_url}}/clientes/1
 method: PUT
 headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
   Content-Type: application/json
 body:
   type: json
-  content: ""
-order: 4257502549618927
+  content: "{\r\n    \"tipo_documento\": \"CC\",\r\n    \"documento\": \"123456789\",\r\n    \"nombre\": \"Cliente Actualizado\",\r\n    \"apellido\": \"Prueba\",\r\n    \"email\": \"cliente_updated@test.com\",\r\n    \"telefono\": \"3007654321\",\r\n    \"direccion\": \"Carrera 50 #10-20\"\r\n}"
+order: 1000000000007000

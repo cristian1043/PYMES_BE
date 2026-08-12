@@ -1,5 +1,8 @@
 $kind: http-request
 name: obtener por id
-url: http://127.0.0.1:5000/api/productos/1
+url: {{base_url}}/productos/1
 method: GET
-order: 4069477091783286
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000010000

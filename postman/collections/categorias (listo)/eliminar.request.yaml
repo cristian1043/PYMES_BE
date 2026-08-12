@@ -1,5 +1,7 @@
 $kind: http-request
 name: eliminar
-url: http://127.0.0.1:5000/api/categorias/
+url: {{base_url}}/categorias/1
 method: DELETE
-order: 4502340224071712
+headers:
+  Authorization: Bearer {{token}}
+order: 1000000000042000

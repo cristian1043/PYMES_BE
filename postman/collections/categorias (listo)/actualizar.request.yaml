@@ -1,8 +1,11 @@
 $kind: http-request
 name: actualizar
-url: http://127.0.0.1:5000/api/categorias/2
+url: {{base_url}}/categorias/1
 method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r\n    \"nombre\": \"Frutas\"\r\n}"
-order: 4481965451395924
+  content: "{\r\n    \"nombre\": \"Electrónica y Tecnología\",\r\n    \"descripcion\": \"Productos electrónicos y accesorios\"\r\n}"
+order: 1000000000041000

@@ -1,0 +1,21 @@
+$kind: http-request
+name: actualizar vinculacion empresa
+url: '{{base_url}}/usuario_empresas/vinculacion'
+method: PUT
+headers:
+  - key: Authorization
+    value: 'Bearer {{token}}'
+  - key: X-Empresa-ID
+    value: '{{empresa_id}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "usuario_id": 1,
+        "empresa_id": 1,
+        "rol_id": 2,
+        "estado": "Activo"
+    }
+order: 1000000000035000

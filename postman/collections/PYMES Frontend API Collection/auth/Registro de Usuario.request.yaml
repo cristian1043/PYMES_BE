@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "tipo_documento": "CC",
+        "documento": "1001234567",
+        "nombre": "Admin",
+        "apellido": "Sistema",
+        "email": "admin@pymesoft.com",
+        "telefono": "3001234567",
+        "username": "admin",
+        "password_hash": "123456",
+        "id_rol": 1
+    }
+order: 2000

@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/empresas/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nit": "901234567-8",
+        "nombre": "Mi Pyme Ejemplo S.A.S",
+        "direccion": "Av Principal 100",
+        "telefono": "6015551234",
+        "email": "contacto@mipyme.com",
+        "estado": "Activo"
+    }
+order: 4000

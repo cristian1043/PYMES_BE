@@ -1,0 +1,15 @@
+$kind: http-request
+name: POST categorias (Insertar / Crear)
+url: "{{base_url}}/categorias"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nombre": "Electr\u00f3nica",
+        "descripcion": "Categor\u00eda de productos electr\u00f3nicos"
+    }
+order: 3000

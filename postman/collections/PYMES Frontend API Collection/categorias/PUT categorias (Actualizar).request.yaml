@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/categorias/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "nombre": "Electr\u00f3nica",
+        "descripcion": "Categor\u00eda de productos electr\u00f3nicos"
+    }
+order: 4000

@@ -1,24 +1,12 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/productos
+url: {{base_url}}/productos
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"codigo\": \"PROD-003\",\r
-
-    \    \"nombre\": \"Monitor LG 24 Pulgadas\",\r
-
-    \    \"descripcion\": \"Monitor Full HD IPS\",\r
-
-    \    \"unidad_medida\": \"UND\",\r
-
-    \    \"precio\": 680000,\r
-
-    \    \"stock\": 12,\r
-
-    \    \"id_categoria\": 1\r
-
-    }"
-order: 4164193642695334
+  content: "{\r\n    \"nombre\": \"Producto Ejemplo\",\r\n    \"descripcion\": \"Descripción del producto de prueba\",\r\n    \"precio\": 25000.0,\r\n    \"stock\": 50,\r\n    \"id_categoria\": 1\r\n}"
+order: 1000000000011000

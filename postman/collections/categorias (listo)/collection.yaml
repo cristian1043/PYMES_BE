@@ -1,0 +1,13 @@
+$kind: collection
+name: Categorias
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{token}}'
+order:
+  - obtener
+  - 'obtener por id'
+  - insertar
+  - actualizar
+  - eliminar

@@ -1,20 +1,12 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/proveedores
+url: {{base_url}}/proveedores
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"nit\": \"901987654\",\r
-
-    \    \"nombre\": \"Insumos del Caribe S.A.S.\",\r
-
-    \    \"telefono\": \"3159876543\",\r
-
-    \    \"direccion\": \"Avenida Pedro de Heredia #45-10, Cartagena\",\r
-
-    \    \"email\": \"ventas@insumoscaribe.com\"\r
-
-    }"
-order: 4502155666543471
+  content: "{\r\n    \"nit_rut\": \"900123456-1\",\r\n    \"nombre\": \"Proveedor Ejemplo S.A.S\",\r\n    \"contacto\": \"Carlos Pérez\",\r\n    \"telefono\": \"3109876543\",\r\n    \"email\": \"contacto@proveedor.com\",\r\n    \"direccion\": \"Zona Industrial Lote 4\"\r\n}"
+order: 1000000000016000

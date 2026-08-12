@@ -1,0 +1,40 @@
+$kind: http-request
+name: registro
+url: '{{base_url}}/auth/register'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "tipo_documento": "CC",
+        "documento": "1001234567",
+        "nombre": "Admin",
+        "apellido": "Sistema",
+        "email": "admin@pymesoft.com",
+        "telefono": "3001234567",
+        "username": "admin",
+        "password_hash": "123456",
+        "id_rol": 1
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 201 Created or 200 OK", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      pm.test("Response is JSON", function () {
+          pm.response.to.be.json;
+      });
+
+      pm.test("Response contains usuario or id field", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.satisfy(function(j) {
+              return j.hasOwnProperty("usuario") || j.hasOwnProperty("id") || j.hasOwnProperty("exito");
+          });
+      });
+order: 1000000000002000

@@ -1,0 +1,6 @@
+$kind: collection
+description: Colección completa de pruebas para el Frontend (PYMES_FE) con soporte para JWT Token (Bearer) y X-Empresa-ID.
+variables:
+  base_url: http://127.0.0.1:5000/api
+  token: TU_TOKEN_JWT_AQUI
+  empresa_id: "1"

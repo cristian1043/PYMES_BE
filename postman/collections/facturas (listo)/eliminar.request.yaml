@@ -1,4 +1,8 @@
 $kind: http-request
-url: http://127.0.0.1:5000/api/facturas/
+name: eliminar
+url: {{base_url}}/facturas/1
 method: DELETE
-order: 4324800460401043
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000028000

@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/usuarios/1"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "tipo_documento": "CC",
+        "documento": "1002345678",
+        "nombre": "Juan",
+        "apellido": "G\u00f3mez",
+        "email": "juan@pymesoft.com",
+        "telefono": "3112223344",
+        "username": "juangomez",
+        "password_hash": "123456",
+        "id_rol": 2
+    }
+order: 4000

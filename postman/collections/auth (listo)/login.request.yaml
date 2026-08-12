@@ -1,0 +1,50 @@
+$kind: http-request
+name: login
+url: '{{base_url}}/auth/login'
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+        "username": "admin@pymesoft.com",
+        "password": "123456"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status 200 OK", function () {
+          pm.response.to.have.status(200);
+      });
+
+      pm.test("Response has exito=true", function () {
+          const json = pm.response.json();
+          pm.expect(json.exito).to.be.true;
+      });
+
+      pm.test("Response contains access_token", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("access_token");
+          pm.expect(json.access_token).to.be.a("string").and.not.empty;
+      });
+
+      pm.test("Response contains refresh_token", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("refresh_token");
+      });
+
+      pm.test("Response contains usuario object", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("usuario");
+          pm.expect(json.usuario).to.be.an("object");
+      });
+
+      // Save token to environment for subsequent requests
+      const json = pm.response.json();
+      if (json.access_token) {
+          pm.environment.set("token", json.access_token);
+      }
+order: 1000000000001000

@@ -1,6 +1,7 @@
 $kind: http-request
 name: obtener
-url: http://127.0.0.1:5000/api/categorias
+url: {{base_url}}/categorias
 method: GET
-examples: .resources/obtener.resources/examples
-order: 1784229677608
+headers:
+  Authorization: Bearer {{token}}
+order: 1000000000038000

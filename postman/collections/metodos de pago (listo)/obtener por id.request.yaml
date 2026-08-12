@@ -1,5 +1,7 @@
 $kind: http-request
 name: obtener por id
-url: 127.0.0.1:5000/api/metodos_pago/1
+url: {{base_url}}/metodos_pago/1
 method: GET
-order: 812746626913300
+headers:
+  Authorization: Bearer {{token}}
+order: 1000000000044000

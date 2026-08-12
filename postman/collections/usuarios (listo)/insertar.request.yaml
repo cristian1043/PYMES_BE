@@ -1,28 +1,12 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/usuarios
+url: {{base_url}}/usuarios
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"tipo_documento\": \"CC\",\r
-
-    \    \"documento\": \"1001234567\",\r
-
-    \    \"nombre\": \"Cristian\",\r
-
-    \    \"apellido\": \"Jimenez\",\r
-
-    \    \"telefono\": \"3001234567\",\r
-
-    \    \"email\": \"cristian@pymesoft.com\",\r
-
-    \    \"username\": \"cristianjg\",\r
-
-    \    \"password_hash\": \"123456\",\r
-
-    \    \"id_rol\": 1\r
-
-    }"
-order: 743548451092694
+  content: "{\r\n    \"tipo_documento\": \"CC\",\r\n    \"documento\": \"1002345678\",\r\n    \"nombre\": \"Juan\",\r\n    \"apellido\": \"Gómez\",\r\n    \"email\": \"juan@pymesoft.com\",\r\n    \"telefono\": \"3112223344\",\r\n    \"username\": \"juangomez\",\r\n    \"password_hash\": \"123456\",\r\n    \"id_rol\": 2\r\n}"
+order: 1000000000031000

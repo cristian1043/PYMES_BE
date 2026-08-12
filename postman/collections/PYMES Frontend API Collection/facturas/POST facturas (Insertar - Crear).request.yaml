@@ -1,0 +1,23 @@
+$kind: http-request
+name: POST facturas (Insertar / Crear)
+url: "{{base_url}}/facturas"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "id_cliente": 1,
+        "id_metodo_pago": 1,
+        "detalles": [
+            {
+                "id_producto": 1,
+                "cantidad": 2,
+                "precio_unitario": 25000.0
+            }
+        ]
+    }
+order: 3000

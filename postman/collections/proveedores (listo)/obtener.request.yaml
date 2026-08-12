@@ -1,8 +1,8 @@
 $kind: http-request
 name: obtener
-url: http://127.0.0.1:5000/api/proveedores
+url: {{base_url}}/proveedores
 method: GET
-body:
-  type: json
-  content: ""
-order: 1784252674384
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000014000

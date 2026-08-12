@@ -1,4 +1,8 @@
 $kind: http-request
-url: http://127.0.0.1:5000/api/facturas
+name: obtener
+url: {{base_url}}/facturas
 method: GET
-order: 1784448573493
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000024000

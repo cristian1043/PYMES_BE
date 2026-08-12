@@ -1,4 +1,8 @@
 $kind: http-request
-url: http://127.0.0.1:5000/api/usuarios
+name: obtener
+url: {{base_url}}/usuarios
 method: GET
-order: 1784261758650
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000029000

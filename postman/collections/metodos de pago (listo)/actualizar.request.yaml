@@ -1,16 +1,11 @@
 $kind: http-request
 name: actualizar
-url: 127.0.0.1:5000/api/metodos_pago/4
+url: {{base_url}}/metodos_pago/1
 method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \        \"descripcion\": \"Pago realizado mediante la billetera digital Daviplata .\",\r
-
-    \        \"id\": 5,\r
-
-    \        \"nombre\": \"Daviplata\"\r
-
-    \    }"
-order: 3277035265283792
+  content: "{\r\n    \"nombre\": \"Transferencia Nequi/Daviplata\",\r\n    \"descripcion\": \"Pagos digitales\"\r\n}"
+order: 1000000000046000

@@ -1,4 +1,8 @@
 $kind: http-request
-url: http://127.0.0.1:5000/api/usuarios/
+name: eliminar
+url: {{base_url}}/usuarios/1
 method: DELETE
-order: 3249817196012278
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+order: 1000000000033000

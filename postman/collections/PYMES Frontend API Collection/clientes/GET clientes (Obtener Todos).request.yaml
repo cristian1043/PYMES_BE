@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{base_url}}/clientes"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: "{{empresa_id}}"
+order: 1000

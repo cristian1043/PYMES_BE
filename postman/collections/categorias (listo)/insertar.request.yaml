@@ -1,8 +1,11 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/categorias
+url: {{base_url}}/categorias
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
 body:
   type: json
-  content: "{\r\n    \"nombre\": \"Calzado\"\r\n}"
-order: 4433890884401814
+  content: "{\r\n    \"nombre\": \"Electrónica\",\r\n    \"descripcion\": \"Categoría de productos electrónicos\"\r\n}"
+order: 1000000000040000

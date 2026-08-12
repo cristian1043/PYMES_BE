@@ -1,26 +1,12 @@
 $kind: http-request
 name: actualizar
-url: http://127.0.0.1:5000/api/compras/1
+url: {{base_url}}/compras/1
 method: PUT
 headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
   Content-Type: application/json
 body:
   type: json
-  content: "{\r
-
-    \    \"numero\": \"COMP-003\",\r
-
-    \    \"subtotal\": 4600000,\r
-
-    \    \"iva\": 190000,\r
-
-    \    \"descuento\": 40000,\r
-
-    \    \"total\": 4750000,\r
-
-    \    \"id_proveedor\": 1,\r
-
-    \    \"id_usuario\": 1\r
-
-    }"
-order: 4257502549618927
+  content: "{\r\n    \"estado\": \"Completada\"\r\n}"
+order: 1000000000022000

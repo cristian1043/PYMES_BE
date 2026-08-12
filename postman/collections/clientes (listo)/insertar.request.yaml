@@ -1,8 +1,12 @@
 $kind: http-request
 name: insertar
-url: http://127.0.0.1:5000/api/clientes
+url: {{base_url}}/clientes
 method: POST
+headers:
+  Authorization: Bearer {{token}}
+  X-Empresa-ID: {{empresa_id}}
+  Content-Type: application/json
 body:
   type: json
-  content: ""
-order: 4080178134513480
+  content: "{\r\n    \"tipo_documento\": \"CC\",\r\n    \"documento\": \"123456789\",\r\n    \"nombre\": \"Cliente Ejemplo\",\r\n    \"apellido\": \"Prueba\",\r\n    \"email\": \"cliente@test.com\",\r\n    \"telefono\": \"3001234567\",\r\n    \"direccion\": \"Calle 123 #45-67\"\r\n}"
+order: 1000000000006000
