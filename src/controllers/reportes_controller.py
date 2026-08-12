@@ -115,3 +115,42 @@ class ReportesController:
                 'productos_bajo_stock': 0,
                 'productos': []
             }
+
+    @staticmethod
+    def get_reporte_top_productos():
+        """Calcula el ranking de productos más vendidos según el historial de facturación."""
+        try:
+            from src.models.detalle_facturas import DetalleFacturas
+            detalles = session.query(DetalleFacturas).all()
+            productos = session.query(Productos).all()
+
+            ventas_prod = {}
+            for d in detalles:
+                pid = d.id_producto
+                cant = d.cantidad or 0
+                subt = (d.subtotal if hasattr(d, 'subtotal') and d.subtotal else (cant * (d.precio_unitario or 0)))
+                if pid not in ventas_prod:
+                    ventas_prod[pid] = {'cantidad_vendida': 0, 'total_recaudado': 0.0}
+                ventas_prod[pid]['cantidad_vendida'] += cant
+                ventas_prod[pid]['total_recaudado'] += float(subt)
+
+            resultado = []
+            for p in productos:
+                stats = ventas_prod.get(p.id, {'cantidad_vendida': 0, 'total_recaudado': 0.0})
+                resultado.append({
+                    'id': p.id,
+                    'codigo': getattr(p, 'codigo', f'PROD-{p.id}'),
+                    'nombre': p.nombre,
+                    'precio': float(p.precio),
+                    'stock': p.stock,
+                    'cantidad_vendida': stats['cantidad_vendida'],
+                    'total_recaudado': stats['total_recaudado']
+                })
+
+            resultado.sort(key=lambda x: (x['cantidad_vendida'], x['total_recaudado']), reverse=True)
+            return resultado
+        except Exception as e:
+            session.rollback()
+            print(f"Error en get_reporte_top_productos: {str(e)}")
+            return []
+

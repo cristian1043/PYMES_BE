@@ -26,3 +26,12 @@ def get_reporte_clientes():
 def get_reporte_inventario():
     inventario = ReportesController.get_reporte_inventario()
     return jsonify(inventario), 200
+
+# ===========================
+# Reporte Comercial de Top Productos
+# ===========================
+@reportes_bp.route("/top-productos", methods=["GET"])
+def get_reporte_top_productos():
+    ranking = ReportesController.get_reporte_top_productos()
+    return jsonify(ranking), 200
+
