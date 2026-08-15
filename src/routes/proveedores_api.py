@@ -1,16 +1,21 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from src.controllers.proveedores_controller import ProveedoresController
+from src.utils.pagination import get_pagination_params
+from src.utils.security import roles_required
 
 proveedores_bp = Blueprint("proveedores", __name__)
 
 
 # ===========================
-# Obtener todos los proveedores
+# Obtener proveedores (paginado)
 # ===========================
 @proveedores_bp.route("/", methods=["GET"])
+@jwt_required(optional=True)
 def get_proveedores():
-    proveedores = ProveedoresController.get()
-    return jsonify([c.to_dict() for c in proveedores]), 200
+    page, per_page = get_pagination_params()
+    resultado = ProveedoresController.get_paginated(page, per_page)
+    return jsonify(resultado), 200
 
 
 # ===========================

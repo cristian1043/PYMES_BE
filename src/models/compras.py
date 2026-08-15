@@ -28,6 +28,10 @@ class Compras(Base):
         return session.query(Compras).all()
 
     @staticmethod
+    def get_query():
+        return session.query(Compras)
+
+    @staticmethod
     def get_by_id(id):
         return session.query(Compras).filter_by(id=id).first()
  

@@ -1,11 +1,15 @@
 from src.models.proveedores import Proveedores
-
+from src.utils.pagination import paginate_query
 
 class ProveedoresController:
 
     @staticmethod
     def get():
         return Proveedores.get()
+
+    @staticmethod
+    def get_paginated(page=1, per_page=10):
+        return paginate_query(Proveedores.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):

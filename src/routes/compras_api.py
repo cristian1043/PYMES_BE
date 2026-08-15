@@ -1,15 +1,20 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from src.controllers.compras_controller import ComprasController
+from src.utils.pagination import get_pagination_params
+from src.utils.security import roles_required
 
 compras_bp = Blueprint("compras", __name__)
   
 # ===========================
-# Obtener todas las compras
+# Obtener todas las compras (paginado)
 # ===========================
 @compras_bp.route("/", methods=["GET"])
+@jwt_required(optional=True)
 def get_compras():
-    compras = ComprasController.get()
-    return jsonify([c.to_dict() for c in compras]), 200
+    page, per_page = get_pagination_params()
+    resultado = ComprasController.get_paginated(page, per_page)
+    return jsonify(resultado), 200
 
 # ===========================
 # Obtener una compra por ID

@@ -18,6 +18,10 @@ class Proveedores(Base):
     @staticmethod
     def get():
         return session.query(Proveedores).all()
+
+    @staticmethod
+    def get_query():
+        return session.query(Proveedores)
     
     @staticmethod
     def get_by_id(id):

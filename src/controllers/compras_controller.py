@@ -1,10 +1,15 @@
 from src.models.compras import Compras
+from src.utils.pagination import paginate_query
 
 class ComprasController:
     
     @staticmethod
     def get():
         return Compras.get()
+
+    @staticmethod
+    def get_paginated(page=1, per_page=10):
+        return paginate_query(Compras.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):
