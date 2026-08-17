@@ -21,9 +21,9 @@ from src.models.facturas import Facturas
 from src.models.compras import Compras
 from werkzeug.security import generate_password_hash
 
-def sembrar_datos():
-    """Genera datos de prueba realistas e integrales para sustentar el sistema PYMES.SOFT."""
-    print("[+] Inicializando base de datos e insertando datos de prueba...")
+def limpiar_y_sembrar_datos():
+    """Limpia empresas antiguas de prueba y garantiza exactamente 4 empresas oficiales con datos limpios."""
+    print("[+] Limpiando y preparando base de datos...")
     Base.metadata.create_all(bind=engine)
 
     # 1. Roles
@@ -60,7 +60,16 @@ def sembrar_datos():
     session.commit()
     print("[OK] Métodos de pago cargados.")
 
-    # 3. Empresas (4 empresas activas)
+    # 3. Limpieza de Empresas Viejas de Prueba
+    nits_oficiales = ["901234567-1", "900999111-2", "800555444-3", "901888777-4"]
+    empresas_viejas = session.query(Empresas).filter(Empresas.nit.notin_(nits_oficiales)).all()
+    for ev in empresas_viejas:
+        session.query(UsuarioEmpresas).filter_by(empresa_id=ev.id).delete()
+        session.delete(ev)
+    session.commit()
+    print(f"[OK] Se eliminaron {len(empresas_viejas)} empresas antiguas de pruebas previas.")
+
+    # 4. Crear/Verificar las 4 Empresas Oficiales
     empresas_def = [
         ("901234567-1", "Comercializadora PYMES S.A.S.", "Calle 100 # 15-45, Bogotá", "6015551234", "contacto@pymes.com.co"),
         ("900999111-2", "Tecnología e Innovación Pyme S.A.", "Av. El Dorado # 68-90, Bogotá", "6013214567", "contacto@tecnoinnova.com"),
@@ -81,9 +90,9 @@ def sembrar_datos():
             session.add(emp)
             session.commit()
         emp_objs.append(emp)
-    print("[OK] 4 Empresas creadas y verificadas.")
+    print("[OK] Exactamente 4 Empresas Oficiales listas.")
 
-    # 4. Usuarios
+    # 5. Usuarios y Vinculaciones
     usuarios_def = [
         ("CC", "1000000001", "Admin Global", "Sistema", "admin@pymesoft.com", "admin", 1),
         ("CC", "1018223344", "Cristian", "García", "cristian@pymes.com", "cristian", 1),
@@ -130,9 +139,9 @@ def sembrar_datos():
                 session.add(v)
                 session.commit()
 
-    print("[OK] Usuarios y vinculaciones a las 4 empresas cargadas.")
+    print("[OK] Usuarios y vinculaciones verificados para las 4 empresas.")
 
-    # 5. Categorías
+    # 6. Categorías
     categorias_def = [
         ("Tecnología y Equipos", "Computadores, accesorios y electrónica de oficina"),
         ("Papelería y Útiles", "Suministros de papelería, impresión y escritura"),
@@ -152,7 +161,7 @@ def sembrar_datos():
         cat_objs.append(cat)
     print("[OK] Categorías cargadas.")
 
-    # 6. Productos (Múltiples para probar paginación)
+    # 7. Productos
     productos_def = [
         ("Laptop Lenovo ThinkPad i7", "16GB RAM, 512GB SSD, pantalla 14 pulgadas", 3850000.0, 15, cat_objs[0].id, "PROD-001", "UND"),
         ("Monitor Dell 27 4K", "Ultra HD IPS 60Hz con conexión USB-C", 1450000.0, 22, cat_objs[0].id, "PROD-002", "UND"),
@@ -183,9 +192,9 @@ def sembrar_datos():
             p.unidad_medida = un
             session.add(p)
     session.commit()
-    print("[OK] Productos cargados (15 productos creados).")
+    print("[OK] Productos cargados (15 productos).")
 
-    # 7. Clientes (Múltiples para probar paginación)
+    # 8. Clientes
     clientes_def = [
         ("CC", "1015432109", "Juan Carlos", "Pérez Gómez", "juan.perez@gmail.com", "3104567890", "Calle 45 # 12-34"),
         ("NIT", "900888777-2", "Inversiones del Norte S.A.S.", "", "contacto@inversionesnorte.com", "6017894561", "Av. El Dorado # 68-90"),
@@ -214,9 +223,9 @@ def sembrar_datos():
             c.direccion = dir_
             session.add(c)
     session.commit()
-    print("[OK] Clientes cargados (12 clientes creados).")
+    print("[OK] Clientes cargados (12 clientes).")
 
-    # 8. Proveedores
+    # 9. Proveedores
     proveedores_def = [
         ("900111222-3", "Mayorista Tecnológico de Colombia", "Carlos Alberto Ruiz", "6014445566", "ventas@mayortecno.com", "Calle 26 # 69-76"),
         ("890999888-1", "Distribuidora de Papelería Panamericana", "Esperanza Gómez", "6013332211", "contacto@panapapel.com.co", "Calle 12 # 34-56"),
@@ -237,9 +246,9 @@ def sembrar_datos():
             prov.direccion = dir_
             session.add(prov)
     session.commit()
-    print("[OK] Proveedores cargados (5 proveedores creados).")
+    print("[OK] Proveedores cargados (5 proveedores).")
 
-    # 9. Facturas de Prueba
+    # 10. Facturas de Prueba
     facturas_def = [
         ("FAC-001", 3850000.0, 731500.0, 4581500.0, 1, 1, 1),
         ("FAC-002", 1450000.0, 275500.0, 1725500.0, 2, 2, 2),
@@ -262,7 +271,7 @@ def sembrar_datos():
     session.commit()
     print("[OK] Facturas cargadas.")
 
-    print("\n[SUCCESS] ¡Siembra de datos completada exitosamente! Tu sistema cuenta con 4 empresas activas y múltiples datos reales.")
+    print("\n[SUCCESS] ¡Base de datos limpia y lista con exactamente 4 empresas oficiales y datos completos!")
 
 if __name__ == '__main__':
-    sembrar_datos()
+    limpiar_y_sembrar_datos()
