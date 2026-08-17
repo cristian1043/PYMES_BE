@@ -1,6 +1,8 @@
 from src.models.productos import Productos
 from src.utils.pagination import paginate_query
 
+import uuid
+
 class ProductosController:
 
     @staticmethod
@@ -24,13 +26,20 @@ class ProductosController:
     @staticmethod
     def create(data):
         producto = Productos()
-        producto.nombre = data["nombre"]
-        producto.descripcion = data["descripcion"]
-        producto.precio = data["precio"]
-        producto.stock = data["stock"]
-        producto.id_categoria = data["id_categoria"]
-        producto.codigo = data["codigo"]
-        producto.unidad_medida = data["unidad_medida"]
+        producto.nombre = data.get("nombre", "")
+        producto.descripcion = data.get("descripcion", "")
+        producto.precio = float(data.get("precio", 0))
+        producto.stock = int(data.get("stock", 0))
+        
+        # Asignar categoría válida o categoría 1 por defecto
+        cat_id = data.get("id_categoria")
+        producto.id_categoria = int(cat_id) if cat_id else 1
+        
+        # Generar código único si no se proporcionó uno
+        cod = data.get("codigo")
+        producto.codigo = str(cod) if cod else f"PROD-{uuid.uuid4().hex[:6].upper()}"
+        producto.unidad_medida = data.get("unidad_medida", "UND")
+        
         producto.create()
         return producto
 
@@ -38,14 +47,16 @@ class ProductosController:
     def update(id, data):
         producto = Productos.get_by_id(id)
         if producto is None:
-            return "Producto no encontrado"
-        producto.nombre = data["nombre"]
-        producto.descripcion = data["descripcion"]
-        producto.precio = data["precio"]
-        producto.stock = data["stock"]
-        producto.id_categoria = data["id_categoria"]
-        producto.codigo = data["codigo"]
-        producto.unidad_medida = data["unidad_medida"]
+            return None
+        producto.nombre = data.get("nombre", producto.nombre)
+        producto.descripcion = data.get("descripcion", producto.descripcion)
+        producto.precio = float(data.get("precio", producto.precio))
+        producto.stock = int(data.get("stock", producto.stock))
+        producto.id_categoria = data.get("id_categoria", producto.id_categoria)
+        if "codigo" in data:
+            producto.codigo = data["codigo"]
+        if "unidad_medida" in data:
+            producto.unidad_medida = data["unidad_medida"]
         producto.update()
         return producto
 

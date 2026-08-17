@@ -18,11 +18,15 @@ class ClientesController:
     @staticmethod
     def create(data):
         cliente = Clientes()
-        cliente.documento = data["documento"]
-        cliente.nombre = data["nombre"]
-        cliente.direccion = data["direccion"]
-        cliente.telefono = data["telefono"]
-        cliente.email = data["email"]
+        cliente.documento = data.get("documento", "")
+        cliente.nombre = data.get("nombre", "")
+        if hasattr(cliente, 'apellido'):
+            cliente.apellido = data.get("apellido", "")
+        cliente.direccion = data.get("direccion", "")
+        cliente.telefono = data.get("telefono", "")
+        cliente.email = data.get("email", "")
+        if hasattr(cliente, 'tipo_documento'):
+            cliente.tipo_documento = data.get("tipo_documento", "CC")
         cliente.create()
         return cliente
 
@@ -33,11 +37,15 @@ class ClientesController:
         if cliente is None:
             return None
 
-        cliente.documento = data["documento"]
-        cliente.nombre = data["nombre"]
-        cliente.direccion = data["direccion"]
-        cliente.telefono = data["telefono"]
-        cliente.email = data["email"]
+        cliente.documento = data.get("documento", cliente.documento)
+        cliente.nombre = data.get("nombre", cliente.nombre)
+        if hasattr(cliente, 'apellido'):
+            cliente.apellido = data.get("apellido", getattr(cliente, 'apellido', ''))
+        cliente.direccion = data.get("direccion", cliente.direccion)
+        cliente.telefono = data.get("telefono", cliente.telefono)
+        cliente.email = data.get("email", cliente.email)
+        if hasattr(cliente, 'tipo_documento'):
+            cliente.tipo_documento = data.get("tipo_documento", getattr(cliente, 'tipo_documento', 'CC'))
         
         cliente.update()
 

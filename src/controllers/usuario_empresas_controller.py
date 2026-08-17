@@ -11,14 +11,13 @@ class UsuarioEmpresasController:
     def get_by_usuario_empresa(usuario_id, empresa_id):
         vinculacion = UsuarioEmpresas.get_by_usuario_empresa(usuario_id, empresa_id)
         if not vinculacion:
-            # Si no existe registro aun en la base de datos, tomar el id_rol por defecto del usuario
             usuario = Usuarios.get_by_id(usuario_id)
             rol_defecto = usuario.id_rol if usuario else 2
             return {
                 "usuario_id": usuario_id,
                 "empresa_id": empresa_id,
                 "rol_id": rol_defecto,
-                "estado": "Activo"
+                "estado": "No Vinculado"
             }
         return vinculacion.to_dict()
 

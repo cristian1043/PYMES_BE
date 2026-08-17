@@ -18,11 +18,13 @@ class ProveedoresController:
     @staticmethod
     def create(data):
         proveedor = Proveedores()
-        proveedor.nit = data["nit"]
-        proveedor.nombre = data["nombre"]
-        proveedor.telefono = data["telefono"]
-        proveedor.direccion = data["direccion"]
-        proveedor.email = data["email"]
+        proveedor.nit = data.get("nit", "")
+        proveedor.nombre = data.get("nombre", "")
+        if hasattr(proveedor, 'contacto'):
+            proveedor.contacto = data.get("contacto", "")
+        proveedor.telefono = data.get("telefono", "")
+        proveedor.direccion = data.get("direccion", "")
+        proveedor.email = data.get("email", "")
         proveedor.create()
         return proveedor
 
@@ -31,11 +33,13 @@ class ProveedoresController:
         proveedor = Proveedores.get_by_id(id)
         if proveedor is None:
             return None
-        proveedor.nit = data["nit"]
-        proveedor.nombre = data["nombre"]
-        proveedor.telefono = data["telefono"]
-        proveedor.direccion = data["direccion"]
-        proveedor.email = data["email"]
+        proveedor.nit = data.get("nit", proveedor.nit)
+        proveedor.nombre = data.get("nombre", proveedor.nombre)
+        if hasattr(proveedor, 'contacto'):
+            proveedor.contacto = data.get("contacto", getattr(proveedor, 'contacto', ''))
+        proveedor.telefono = data.get("telefono", proveedor.telefono)
+        proveedor.direccion = data.get("direccion", proveedor.direccion)
+        proveedor.email = data.get("email", proveedor.email)
         proveedor.update()
         return proveedor
 
