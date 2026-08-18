@@ -23,8 +23,11 @@ def get_facturas():
 @jwt_required(optional=True)
 def get_factura(id):
     factura = FacturasController.get_by_id(id)
-    if factura and hasattr(factura, "to_dict"):
-        return jsonify(factura.to_dict()), 200
+    if factura:
+        if isinstance(factura, dict):
+            return jsonify(factura), 200
+        elif hasattr(factura, "to_dict"):
+            return jsonify(factura.to_dict()), 200
     return jsonify({"mensaje": "Factura no encontrada"}), 404
 
 # ===========================

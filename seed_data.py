@@ -279,6 +279,39 @@ def limpiar_y_sembrar_datos():
     session.commit()
     print("[OK] Facturas cargadas.")
 
+    # 11. Detalle de Facturas (Productos Comprados por cada factura)
+    from src.models.detalle_facturas import DetalleFacturas
+    facturas_db = session.query(Facturas).all()
+    productos_db = session.query(Productos).all()
+
+    if facturas_db and productos_db:
+        for idx, f in enumerate(facturas_db):
+            p1 = productos_db[idx % len(productos_db)]
+            p2 = productos_db[(idx + 1) % len(productos_db)]
+
+            d1 = session.query(DetalleFacturas).filter_by(id_factura=f.id, id_producto=p1.id).first()
+            if not d1:
+                d1 = DetalleFacturas()
+                d1.id_factura = f.id
+                d1.id_producto = p1.id
+                d1.cantidad = 1
+                d1.precio_unitario = p1.precio
+                d1.subtotal = p1.precio
+                session.add(d1)
+
+            d2 = session.query(DetalleFacturas).filter_by(id_factura=f.id, id_producto=p2.id).first()
+            if not d2:
+                d2 = DetalleFacturas()
+                d2.id_factura = f.id
+                d2.id_producto = p2.id
+                d2.cantidad = 2
+                d2.precio_unitario = p2.precio
+                d2.subtotal = p2.precio * 2
+                session.add(d2)
+
+        session.commit()
+        print("[OK] Detalle de productos comprados asignados a las facturas.")
+
     print("\n[SUCCESS] ¡Base de datos limpia y lista con exactamente 4 empresas oficiales y datos completos!")
 
 if __name__ == '__main__':

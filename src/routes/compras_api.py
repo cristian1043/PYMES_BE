@@ -23,7 +23,10 @@ def get_compras():
 def get_compra(id):
     compra = ComprasController.get_by_id(id)
     if compra:
-        return jsonify(compra.to_dict()), 200
+        if isinstance(compra, dict):
+            return jsonify(compra), 200
+        elif hasattr(compra, "to_dict"):
+            return jsonify(compra.to_dict()), 200
     return jsonify({
         "mensaje": "Compra no encontrada"
     }), 404
