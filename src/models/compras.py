@@ -46,7 +46,7 @@ class Compras(Base):
         return {
             "id": self.id,
             "numero": self.numero,
-            "fecha": self.fecha,
+            "fecha": self.fecha.strftime('%Y-%m-%d %H:%M:%S') if hasattr(self.fecha, 'strftime') else str(self.fecha) if self.fecha else None,
             "subtotal": self.subtotal,
             "iva": self.iva,
             "descuento": self.descuento,
