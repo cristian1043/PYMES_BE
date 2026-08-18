@@ -312,6 +312,66 @@ def limpiar_y_sembrar_datos():
         session.commit()
         print("[OK] Detalle de productos comprados asignados a las facturas.")
 
+    # 12. Compras de Inventario y Detalle de Compras (12 Compras con ítems)
+    from src.models.detalle_compras import DetalleCompras
+    compras_def = [
+        ("FAC-COMP-001", 3500000.0, 665000.0, 4165000.0, 1, 1),
+        ("FAC-COMP-002", 1450000.0, 275500.0, 1725500.0, 2, 2),
+        ("FAC-COMP-003", 680000.0, 129200.0, 809200.0, 3, 3),
+        ("FAC-COMP-004", 125000.0, 23750.0, 148750.0, 4, 1),
+        ("FAC-COMP-005", 490000.0, 93100.0, 583100.0, 5, 2),
+        ("FAC-COMP-006", 310000.0, 58900.0, 368900.0, 1, 3),
+        ("FAC-COMP-007", 175000.0, 33250.0, 208250.0, 2, 1),
+        ("FAC-COMP-008", 85000.0, 16150.0, 101150.0, 3, 2),
+        ("FAC-COMP-009", 420000.0, 79800.0, 499800.0, 4, 3),
+        ("FAC-COMP-010", 2100000.0, 399000.0, 2499000.0, 5, 1),
+        ("FAC-COMP-011", 540000.0, 102600.0, 642600.0, 1, 2),
+        ("FAC-COMP-012", 280000.0, 53200.0, 333200.0, 2, 3)
+    ]
+    for num, sub, iva, tot, id_p, id_u in compras_def:
+        c = session.query(Compras).filter_by(numero=num).first()
+        if not c:
+            c = Compras()
+            c.numero = num
+            c.subtotal = sub
+            c.iva = iva
+            c.descuento = 0.0
+            c.total = tot
+            c.id_proveedor = id_p
+            c.id_usuario = id_u
+            session.add(c)
+    session.commit()
+    print("[OK] Compras cargadas (12 compras de inventario).")
+
+    compras_db = session.query(Compras).all()
+    if compras_db and productos_db:
+        for idx, c in enumerate(compras_db):
+            p1 = productos_db[idx % len(productos_db)]
+            p2 = productos_db[(idx + 2) % len(productos_db)]
+
+            dc1 = session.query(DetalleCompras).filter_by(id_compra=c.id, id_producto=p1.id).first()
+            if not dc1:
+                dc1 = DetalleCompras()
+                dc1.id_compra = c.id
+                dc1.id_producto = p1.id
+                dc1.cantidad = 2
+                dc1.costo_unitario = p1.precio * 0.8
+                dc1.subtotal = p1.precio * 0.8 * 2
+                session.add(dc1)
+
+            dc2 = session.query(DetalleCompras).filter_by(id_compra=c.id, id_producto=p2.id).first()
+            if not dc2:
+                dc2 = DetalleCompras()
+                dc2.id_compra = c.id
+                dc2.id_producto = p2.id
+                dc2.cantidad = 5
+                dc2.costo_unitario = p2.precio * 0.8
+                dc2.subtotal = p2.precio * 0.8 * 5
+                session.add(dc2)
+
+        session.commit()
+        print("[OK] Detalle de insumos comprados asignados a cada compra.")
+
     print("\n[SUCCESS] ¡Base de datos limpia y lista con exactamente 4 empresas oficiales y datos completos!")
 
 if __name__ == '__main__':

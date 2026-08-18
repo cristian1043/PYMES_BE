@@ -1,3 +1,4 @@
+from datetime import datetime
 from src.models import session
 from src.models.compras import Compras
 from src.models.proveedores import Proveedores
@@ -72,6 +73,10 @@ class ComprasController:
                 'costo_unitario': compra.subtotal,
                 'subtotal': compra.subtotal
             })
+
+        # Convertir objetos datetime a string para compatibilidad JSON
+        if isinstance(c_dict.get('fecha'), datetime):
+            c_dict['fecha'] = c_dict['fecha'].strftime('%Y-%m-%d %H:%M:%S')
 
         c_dict['detalles'] = items_list
         return c_dict

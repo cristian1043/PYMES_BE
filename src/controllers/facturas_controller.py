@@ -84,6 +84,12 @@ class FacturasController:
                 'subtotal': factura.subtotal
             })
 
+        # Convertir objetos datetime a string para compatibilidad JSON
+        if isinstance(f_dict.get('fecha'), datetime):
+            f_dict['fecha'] = f_dict['fecha'].strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(f_dict.get('cliente'), dict) and isinstance(f_dict['cliente'].get('created_at'), datetime):
+            f_dict['cliente']['created_at'] = f_dict['cliente']['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+
         f_dict['detalles'] = items_list
         return f_dict
 
