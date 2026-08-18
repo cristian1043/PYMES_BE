@@ -22,6 +22,7 @@ def get_vinculacion():
         return jsonify(data), 200
     except Exception as e:
         session.rollback()
+        print(f"Error en get_vinculacion: {str(e)}")
         return jsonify({"estado": "Activo", "rol_id": 2}), 200
 
 @usuario_empresas_bp.route("/vinculacion", methods=["PUT"])

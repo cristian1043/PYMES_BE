@@ -1,5 +1,8 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from src.models import Base, session
+from src.models.roles import Roles
+from src.models.usuarios import Usuarios
+from src.models.empresas import Empresas
 
 class UsuarioEmpresas(Base):
     __tablename__ = "usuario_empresas"

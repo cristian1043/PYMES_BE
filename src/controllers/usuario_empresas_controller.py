@@ -1,3 +1,4 @@
+from src.models import session
 from src.models.usuario_empresas import UsuarioEmpresas
 from src.models.usuarios import Usuarios
 
@@ -33,12 +34,14 @@ class UsuarioEmpresasController:
             vinculacion.empresa_id = empresa_id
             vinculacion.rol_id = int(rol_id) if rol_id is not None else rol_defecto
             vinculacion.estado = estado if estado is not None else "Activo"
-            vinculacion.save()
+            session.add(vinculacion)
+            session.commit()
         else:
             if estado is not None:
-                vinculacion.estado = estado
+                vinculacion.estado = str(estado)
             if rol_id is not None:
                 vinculacion.rol_id = int(rol_id)
-            vinculacion.update()
+            session.add(vinculacion)
+            session.commit()
 
         return vinculacion.to_dict()
