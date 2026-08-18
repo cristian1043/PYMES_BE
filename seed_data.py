@@ -248,12 +248,20 @@ def limpiar_y_sembrar_datos():
     session.commit()
     print("[OK] Proveedores cargados (5 proveedores).")
 
-    # 10. Facturas de Prueba
+    # 10. Facturas de Prueba (12 facturas para establecer múltiples páginas de paginación)
     facturas_def = [
         ("FAC-001", 3850000.0, 731500.0, 4581500.0, 1, 1, 1),
         ("FAC-002", 1450000.0, 275500.0, 1725500.0, 2, 2, 2),
         ("FAC-003", 600000.0, 114000.0, 714000.0, 3, 3, 1),
-        ("FAC-004", 950000.0, 180500.0, 1130500.0, 4, 1, 2)
+        ("FAC-004", 950000.0, 180500.0, 1130500.0, 4, 1, 2),
+        ("FAC-005", 280000.0, 53200.0, 333200.0, 5, 2, 1),
+        ("FAC-006", 680000.0, 129200.0, 809200.0, 6, 1, 2),
+        ("FAC-007", 540000.0, 102600.0, 642600.0, 7, 3, 1),
+        ("FAC-008", 125000.0, 23750.0, 148750.0, 8, 1, 2),
+        ("FAC-009", 490000.0, 93100.0, 583100.0, 9, 2, 1),
+        ("FAC-010", 310000.0, 58900.0, 368900.0, 10, 1, 2),
+        ("FAC-011", 175000.0, 33250.0, 208250.0, 11, 3, 1),
+        ("FAC-012", 420000.0, 79800.0, 499800.0, 12, 1, 2)
     ]
     for num, sub, iva, tot, id_c, id_m, id_u in facturas_def:
         f = session.query(Facturas).filter_by(numero=num).first()
