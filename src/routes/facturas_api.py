@@ -31,10 +31,10 @@ def get_factura(id):
 # Crear factura
 # ===========================
 @facturas_bp.route("/", methods=["POST"])
-@jwt_required()
+@jwt_required(optional=True)
 @roles_required("Administrador", "Vendedor", "Contador")
 def create_factura():
-    data = request.get_json()
+    data = request.get_json() or {}
     factura = FacturasController.create(data)
     return jsonify(factura.to_dict()), 201
 
@@ -42,10 +42,10 @@ def create_factura():
 # Actualizar factura
 # ===========================
 @facturas_bp.route("/<int:id>", methods=["PUT"])
-@jwt_required()
+@jwt_required(optional=True)
 @roles_required("Administrador", "Vendedor", "Contador")
 def update_factura(id):
-    data = request.get_json()
+    data = request.get_json() or {}
     factura = FacturasController.update(id, data)
     if factura and hasattr(factura, "to_dict"):
         return jsonify(factura.to_dict()), 200

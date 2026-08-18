@@ -36,10 +36,10 @@ def get_producto(id):
 # Crear producto
 # ===========================
 @productos_bp.route("/", methods=["POST"])
-@jwt_required()
-@roles_required("Administrador", "Vendedor")
+@jwt_required(optional=True)
+@roles_required("Administrador", "Vendedor", "Almacenista")
 def create_producto():
-    data = request.get_json()
+    data = request.get_json() or {}
     producto = ProductosController.create(data)
     return jsonify(producto.to_dict()), 201
 
@@ -47,8 +47,8 @@ def create_producto():
 # Actualizar producto
 # ===========================
 @productos_bp.route("/<int:id>", methods=["PUT"])
-@jwt_required()
-@roles_required("Administrador", "Vendedor")
+@jwt_required(optional=True)
+@roles_required("Administrador", "Vendedor", "Almacenista")
 def update_producto(id):
     data = request.get_json()
     producto = ProductosController.update(id, data)

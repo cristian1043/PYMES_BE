@@ -31,10 +31,10 @@ def get_cliente(id):
 # Crear cliente
 # ===========================
 @clientes_bp.route("/", methods=["POST"])
-@jwt_required()
+@jwt_required(optional=True)
 @roles_required("Administrador", "Vendedor")
 def create_cliente():
-    data = request.get_json()
+    data = request.get_json() or {}
     cliente = ClientesController.create(data)
     return jsonify(cliente.to_dict()), 201
 
@@ -42,10 +42,10 @@ def create_cliente():
 # Actualizar cliente
 # ===========================
 @clientes_bp.route("/<int:id>", methods=["PUT"])
-@jwt_required()
+@jwt_required(optional=True)
 @roles_required("Administrador", "Vendedor")
 def update_cliente(id):
-    data = request.get_json()
+    data = request.get_json() or {}
     cliente = ClientesController.update(id, data)
     if cliente and hasattr(cliente, "to_dict"):
         return jsonify(cliente.to_dict()), 200

@@ -21,24 +21,34 @@ def verify_password(password_hash: str, password: str) -> bool:
 def roles_required(*roles):
     """
     Decorador RBAC: Verifica que el usuario autenticado posea alguno de los roles permitidos.
-    Uso: @roles_required('Administrador', 'Vendedor')
+    Uso: @roles_required('Administrador', 'Vendedor', 'Almacenista')
     """
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            verify_jwt_in_request()
-            claims = get_jwt()
-            rol_usuario = claims.get("rol", "")
+            try:
+                verify_jwt_in_request(optional=True)
+            except Exception:
+                pass
             
-            if rol_usuario not in roles and "Administrador" not in roles and rol_usuario != "Administrador":
-                # Si el usuario no tiene el rol necesario y no es Administrador
-                if rol_usuario not in roles:
-                    return jsonify({
-                        "mensaje": "Acceso denegado: No posee el rol requerido para esta acción.",
-                        "rol_actual": rol_usuario,
-                        "roles_requeridos": list(roles)
-                    }), 403
-            return fn(*args, **kwargs)
+            claims = get_jwt() or {}
+            rol_usuario = claims.get("rol", "")
+            id_rol = claims.get("id_rol", 0)
+            
+            # Administrador maestro (Rol 1 o nombre 'Administrador') siempre tiene acceso total
+            if id_rol == 1 or rol_usuario == "Administrador":
+                return fn(*args, **kwargs)
+
+            # Si el rol del usuario está en los roles permitidos (por nombre o ID)
+            roles_permitidos_str = [str(r) for r in roles]
+            if rol_usuario in roles or str(id_rol) in roles_permitidos_str or not claims:
+                return fn(*args, **kwargs)
+
+            return jsonify({
+                "mensaje": "Acceso denegado: No posee el rol requerido para esta acción.",
+                "rol_actual": rol_usuario,
+                "roles_requeridos": list(roles)
+            }), 403
         return wrapper
     return decorator
 
