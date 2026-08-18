@@ -74,5 +74,12 @@ app.register_blueprint(reportes_bp, url_prefix="/api/reportes")
 app.register_blueprint(empresas_bp, url_prefix="/api/empresas")
 app.register_blueprint(usuario_empresas_bp, url_prefix="/api/usuario_empresas")
 
+@app.errorhandler(500)
+def handle_500_error(e):
+    import traceback
+    traceback.print_exc()
+    original = getattr(e, 'original_exception', e)
+    return jsonify({"error": "Error interno del servidor", "detalle": str(original)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
