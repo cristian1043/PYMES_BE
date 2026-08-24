@@ -60,6 +60,7 @@ class AuthController:
         )
         refresh_token = create_refresh_token(
             identity=str(usuario.id),
+            additional_claims=claims,
             expires_delta=timedelta(days=30)
         )
 

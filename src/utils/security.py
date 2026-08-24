@@ -32,6 +32,9 @@ def roles_required(*roles):
                 pass
             
             claims = get_jwt() or {}
+            if not claims:
+                return jsonify({"exito": False, "mensaje": "Se requiere autenticación para realizar esta acción."}), 401
+
             rol_usuario = claims.get("rol", "")
             id_rol = claims.get("id_rol", 0)
             
@@ -41,10 +44,11 @@ def roles_required(*roles):
 
             # Si el rol del usuario está en los roles permitidos (por nombre o ID)
             roles_permitidos_str = [str(r) for r in roles]
-            if rol_usuario in roles or str(id_rol) in roles_permitidos_str or not claims:
+            if rol_usuario in roles or str(id_rol) in roles_permitidos_str:
                 return fn(*args, **kwargs)
 
             return jsonify({
+                "exito": False,
                 "mensaje": "Acceso denegado: No posee el rol requerido para esta acción.",
                 "rol_actual": rol_usuario,
                 "roles_requeridos": list(roles)

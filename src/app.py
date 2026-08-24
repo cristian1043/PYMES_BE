@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -33,9 +33,22 @@ DatabaseMigrations.ejecutar_migraciones()
 
 app = Flask(__name__)
 
-# Configuración de Seguridad y JWT
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "pymes-jwt-secret-key-2026-key")
+# Configuración de Seguridad y JWT (clave de al menos 32 bytes)
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "pymes-jwt-secret-key-2026-secure-key-32bytes")
 jwt = JWTManager(app)
+
+@jwt.unauthorized_loader
+def custom_unauthorized_response(err_str):
+    return jsonify({"exito": False, "mensaje": "Se requiere autenticación para acceder a este recurso.", "code": "authorization_header_missing", "error": err_str}), 401
+
+@jwt.expired_token_loader
+def custom_expired_token_response(jwt_header, jwt_payload):
+    return jsonify({"exito": False, "mensaje": "El token de acceso ha expirado. Por favor renovar o iniciar sesión.", "code": "token_expired"}), 401
+
+@jwt.invalid_token_loader
+def custom_invalid_token_response(err_str):
+    return jsonify({"exito": False, "mensaje": "Token de autenticación inválido o malformado.", "code": "invalid_token", "error": err_str}), 401
+
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 limiter = Limiter(get_remote_address, app=app, default_limits=["500 per day", "100 per hour"])
 
