@@ -1,3 +1,4 @@
+from src.models import session
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
 from src.utils.migrations import DatabaseMigrations
@@ -27,12 +28,12 @@ class UsuariosController:
     @staticmethod
     def create(data):
         DatabaseMigrations.ejecutar_migraciones()
-        id_rol = data.get("id_rol", 1)
+        id_rol = int(data.get("id_rol")) if data.get("id_rol") else 2
         rol_existente = Roles.get_by_id(id_rol)
         if not rol_existente:
             nuevo_rol = Roles()
-            nuevo_rol.nombre = "Administrador"
-            nuevo_rol.descripcion = "Rol administrador del sistema"
+            nuevo_rol.nombre = "Vendedor"
+            nuevo_rol.descripcion = "Gestión de ventas y clientes"
             nuevo_rol.save()
             id_rol = nuevo_rol.id
 
@@ -102,10 +103,12 @@ class UsuariosController:
 
     @staticmethod
     def delete(id):
+        from src.models.usuario_empresas import UsuarioEmpresas
         usuario = Usuarios.get_by_id(id)
 
         if usuario is None:
             return False
 
+        session.query(UsuarioEmpresas).filter_by(usuario_id=id).delete()
         usuario.delete()
         return True

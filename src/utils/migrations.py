@@ -32,5 +32,19 @@ class DatabaseMigrations:
                     conn.commit()
                 except Exception:
                     pass
+
+                # Columnas adicionales para la tabla facturas
+                try:
+                    conn.execute(text("ALTER TABLE facturas ADD COLUMN estado VARCHAR(20) DEFAULT 'Emitida'"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+                # Columnas adicionales para la tabla productos
+                try:
+                    conn.execute(text("ALTER TABLE productos ADD COLUMN id_proveedor INT"))
+                    conn.commit()
+                except Exception:
+                    pass
         except Exception:
             pass

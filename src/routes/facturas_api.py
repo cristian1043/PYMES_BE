@@ -17,6 +17,15 @@ def get_facturas():
     return jsonify(resultado), 200
 
 # ===========================
+# Obtener el siguiente número consecutivo de factura
+# ===========================
+@facturas_bp.route("/siguiente_numero", methods=["GET"])
+@jwt_required(optional=True)
+def get_siguiente_numero():
+    num = FacturasController.obtener_siguiente_numero()
+    return jsonify({"siguiente_numero": num}), 200
+
+# ===========================
 # Obtener una factura por ID
 # ===========================
 @facturas_bp.route("/<int:id>", methods=["GET"])
@@ -52,6 +61,18 @@ def update_factura(id):
     factura = FacturasController.update(id, data)
     if factura and hasattr(factura, "to_dict"):
         return jsonify(factura.to_dict()), 200
+    return jsonify({"mensaje": "Factura no encontrada"}), 404
+
+# ===========================
+# Cancelar factura
+# ===========================
+@facturas_bp.route("/<int:id>/cancelar", methods=["POST"])
+@jwt_required(optional=True)
+@roles_required("Administrador", "Vendedor")
+def cancelar_factura(id):
+    factura = FacturasController.cancelar(id)
+    if factura:
+        return jsonify({"mensaje": "Factura cancelada correctamente", "factura": factura.to_dict()}), 200
     return jsonify({"mensaje": "Factura no encontrada"}), 404
 
 # ===========================

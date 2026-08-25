@@ -13,7 +13,9 @@ except Exception:
     db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "pymes.db"))
     engine = create_engine(f"sqlite:///{db_path}")
 
+from sqlalchemy.orm import sessionmaker, scoped_session, declarative_base
+
 Session = sessionmaker(bind=engine)
-session = Session()
+session = scoped_session(Session)
 Base = declarative_base()
 

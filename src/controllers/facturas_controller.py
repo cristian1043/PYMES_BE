@@ -94,7 +94,26 @@ class FacturasController:
         return f_dict
 
     @staticmethod
+    def obtener_siguiente_numero():
+        facturas = Facturas.get()
+        max_num = 0
+        for f in facturas:
+            if f.numero and f.numero.startswith("FAC-"):
+                try:
+                    num_part = int(f.numero.replace("FAC-", "").strip())
+                    if num_part > max_num:
+                        max_num = num_part
+                except ValueError:
+                    pass
+        siguiente = max_num + 1
+        return f"FAC-{siguiente:03d}"
+
+    @staticmethod
     def create(data):
+        numero = data.get("numero")
+        if not numero or not str(numero).strip():
+            numero = FacturasController.obtener_siguiente_numero()
+
         subtotal = float(data.get("subtotal", 0))
         iva = float(data.get("iva", 0))
         descuento = float(data.get("descuento", 0))
@@ -105,17 +124,45 @@ class FacturasController:
             fecha_factura = datetime.now()
 
         factura = Facturas()
-        factura.numero = data["numero"]
+        factura.numero = str(numero).strip()
         factura.fecha = fecha_factura
         factura.subtotal = subtotal
         factura.iva = iva
         factura.descuento = descuento
         factura.total = data.get("total", total)
+        factura.estado = data.get("estado", "Emitida")
         factura.id_cliente = int(data["id_cliente"])
         factura.id_usuario = int(data.get("id_usuario", 1))
         factura.id_metodo_pago = int(data.get("id_metodo_pago", 1))
         
-        factura.save()
+        factura.create()
+
+        # Guardar ítems de DetalleFacturas y descontar stock si vienen en la petición
+        detalles = data.get("detalles") or data.get("items") or []
+        for item in detalles:
+            try:
+                id_prod = int(item.get("id_producto"))
+                cant = int(item.get("cantidad", 1))
+                prec = float(item.get("precio_unitario", 0))
+                sub_item = float(item.get("subtotal", cant * prec))
+
+                det = DetalleFacturas()
+                det.id_factura = factura.id
+                det.id_producto = id_prod
+                det.cantidad = cant
+                det.precio_unitario = prec
+                det.subtotal = sub_item
+                session.add(det)
+
+                # Actualizar stock de inventario
+                prod = Productos.get_by_id(id_prod)
+                if prod:
+                    prod.stock = max(0, (prod.stock or 0) - cant)
+                    session.add(prod)
+            except Exception as e:
+                print(f"Error al guardar detalle de factura o actualizar stock: {str(e)}")
+
+        session.commit()
         return factura
 
     @staticmethod
@@ -132,6 +179,8 @@ class FacturasController:
         factura.numero = data.get("numero", factura.numero)
         if "fecha" in data:
             factura.fecha = data["fecha"]
+        if "estado" in data:
+            factura.estado = data["estado"]
         factura.subtotal = subtotal
         factura.iva = iva
         factura.descuento = descuento
@@ -144,9 +193,31 @@ class FacturasController:
         return factura
 
     @staticmethod
+    def cancelar(id):
+        """Cancela la factura emitida y restaura el stock de productos vendidos."""
+        factura = Facturas.get_by_id(id)
+        if not factura:
+            return None
+
+        factura.estado = "Cancelada"
+        
+        # Revertir stock de productos
+        detalles_db = session.query(DetalleFacturas).filter_by(id_factura=id).all()
+        for det in detalles_db:
+            prod = Productos.get_by_id(det.id_producto)
+            if prod:
+                prod.stock = (prod.stock or 0) + det.cantidad
+                session.add(prod)
+
+        session.commit()
+        return factura
+
+    @staticmethod
     def delete(id):
         factura = Facturas.get_by_id(id)
         if factura is None:
             return False
+        # Eliminar detalles asociados
+        session.query(DetalleFacturas).filter_by(id_factura=id).delete()
         factura.delete()
         return True

@@ -9,7 +9,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from src.models import Base, engine
+from src.models import Base, engine, session
 from src.utils.migrations import DatabaseMigrations
 
 # Importar los modelos para que se registren en la base de datos
@@ -50,7 +50,19 @@ def custom_invalid_token_response(err_str):
     return jsonify({"exito": False, "mensaje": "Token de autenticación inválido o malformado.", "code": "invalid_token", "error": err_str}), 401
 
 CORS(app, resources={r"/api/*": {"origins": "*"}})
-limiter = Limiter(get_remote_address, app=app, default_limits=["500 per day", "100 per hour"])
+limiter = Limiter(get_remote_address, app=app, default_limits=["100000 per day", "10000 per hour"])
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    if exception:
+        try:
+            session.rollback()
+        except Exception:
+            pass
+    try:
+        session.remove()
+    except Exception:
+        pass
 
 from src.routes import (
     auth_bp,
@@ -91,6 +103,10 @@ app.register_blueprint(usuario_empresas_bp, url_prefix="/api/usuario_empresas")
 def handle_500_error(e):
     import traceback
     traceback.print_exc()
+    try:
+        session.rollback()
+    except Exception:
+        pass
     original = getattr(e, 'original_exception', e)
     return jsonify({"error": "Error interno del servidor", "detalle": str(original)}), 500
 

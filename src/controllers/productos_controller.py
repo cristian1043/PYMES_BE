@@ -35,6 +35,10 @@ class ProductosController:
         cat_id = data.get("id_categoria")
         producto.id_categoria = int(cat_id) if cat_id else 1
         
+        # Asignar proveedor si fue proporcionado
+        prov_id = data.get("id_proveedor")
+        producto.id_proveedor = int(prov_id) if prov_id else None
+
         # Generar código único si no se proporcionó uno
         cod = data.get("codigo")
         producto.codigo = str(cod) if cod else f"PROD-{uuid.uuid4().hex[:6].upper()}"
@@ -52,7 +56,10 @@ class ProductosController:
         producto.descripcion = data.get("descripcion", producto.descripcion)
         producto.precio = float(data.get("precio", producto.precio))
         producto.stock = int(data.get("stock", producto.stock))
-        producto.id_categoria = data.get("id_categoria", producto.id_categoria)
+        if "id_categoria" in data:
+            producto.id_categoria = int(data["id_categoria"]) if data["id_categoria"] else producto.id_categoria
+        if "id_proveedor" in data:
+            producto.id_proveedor = int(data["id_proveedor"]) if data["id_proveedor"] else None
         if "codigo" in data:
             producto.codigo = data["codigo"]
         if "unidad_medida" in data:
