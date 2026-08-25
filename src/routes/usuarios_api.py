@@ -25,12 +25,27 @@ def get_usuarios():
 
 
 # ===========================
-# Obtener un usuario
+# Obtener un usuario por ID
 # ===========================
 @usuarios_bp.route("/<int:id>", methods=["GET"])
 def get_usuario(id):
     try:
         usuario = UsuariosController.get_by_id(id)
+        if usuario:
+            return jsonify(usuario.to_dict()), 200
+        return jsonify({"mensaje": "Usuario no encontrado"}), 404
+    except Exception as e:
+        session.rollback()
+        return jsonify({"mensaje": str(e)}), 500
+
+
+# ===========================
+# Obtener un usuario por Documento
+# ===========================
+@usuarios_bp.route("/documento/<doc>", methods=["GET"])
+def get_usuario_por_documento(doc):
+    try:
+        usuario = UsuariosController.get_by_documento(doc)
         if usuario:
             return jsonify(usuario.to_dict()), 200
         return jsonify({"mensaje": "Usuario no encontrado"}), 404

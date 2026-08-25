@@ -17,6 +17,24 @@ def get_compras():
     return jsonify(resultado), 200
 
 # ===========================
+# Obtener siguiente número de compra
+# ===========================
+@compras_bp.route("/siguiente_numero", methods=["GET"])
+def get_siguiente_numero():
+    numero = ComprasController.obtener_siguiente_numero()
+    return jsonify({"siguiente_numero": numero}), 200
+
+# ===========================
+# Cancelar una compra
+# ===========================
+@compras_bp.route("/<int:id>/cancelar", methods=["POST"])
+def cancelar_compra(id):
+    compra = ComprasController.cancelar(id)
+    if compra:
+        return jsonify(compra.to_dict()), 200
+    return jsonify({"mensaje": "Compra no encontrada"}), 404
+
+# ===========================
 # Obtener una compra por ID
 # ===========================
 @compras_bp.route("/<int:id>", methods=["GET"])

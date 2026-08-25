@@ -63,15 +63,18 @@ class ReportesController:
 
             resultado = []
             for cli in clientes:
-                facturas_cli = [f for f in facturas if f.id_cliente == cli.id]
-                total_comprado = sum(f.total for f in facturas_cli)
+                facturas_cli = [f for f in facturas if f.id_cliente and str(f.id_cliente) == str(cli.id)]
+                total_comprado = sum(float(f.total or 0.0) for f in facturas_cli)
                 num_facturas = len(facturas_cli)
+
+                apell = getattr(cli, 'apellido', '') or ''
+                nombre_comp = f"{cli.nombre} {apell}".strip()
 
                 resultado.append({
                     'id': cli.id,
-                    'nombre': f"{cli.nombre} {cli.apellido}".strip(),
-                    'email': cli.email,
-                    'telefono': cli.telefono,
+                    'nombre': nombre_comp,
+                    'email': cli.email or 'Sin correo',
+                    'telefono': cli.telefono or 'Sin teléfono',
                     'num_facturas': num_facturas,
                     'total_comprado': total_comprado
                 })

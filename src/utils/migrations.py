@@ -46,5 +46,39 @@ class DatabaseMigrations:
                     conn.commit()
                 except Exception:
                     pass
+
+                # Columnas adicionales para la tabla clientes
+                columnas_clientes = [
+                    "ALTER TABLE clientes ADD COLUMN tiene_tarjeta VARCHAR(5) DEFAULT 'No'",
+                    "ALTER TABLE clientes ADD COLUMN tipo_tarjeta VARCHAR(50)",
+                    "ALTER TABLE clientes ADD COLUMN banco_tarjeta VARCHAR(100)",
+                    "ALTER TABLE clientes ADD COLUMN franquicia_tarjeta VARCHAR(50)",
+                    "ALTER TABLE clientes ADD COLUMN ultimos_digitos_tarjeta VARCHAR(4)"
+                ]
+                for query in columnas_clientes:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+                # Columnas adicionales para la tabla proveedores
+                try:
+                    conn.execute(text("ALTER TABLE proveedores ADD COLUMN detalle_servicios VARCHAR(500)"))
+                    conn.commit()
+                except Exception:
+                    pass
+
+                # Columnas adicionales para la tabla compras
+                columnas_compras = [
+                    "ALTER TABLE compras ADD COLUMN numero VARCHAR(50)",
+                    "ALTER TABLE compras ADD COLUMN estado VARCHAR(20) DEFAULT 'Completada'"
+                ]
+                for query in columnas_compras:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
         except Exception:
             pass

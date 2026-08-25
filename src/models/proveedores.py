@@ -10,6 +10,7 @@ class Proveedores(Base):
     telefono = Column(String(20), nullable=False)
     direccion = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
+    detalle_servicios = Column(String(500))
 
     def save(self):
         session.add(self)
@@ -41,5 +42,6 @@ class Proveedores(Base):
             "nombre": self.nombre,
             "telefono": self.telefono,
             "direccion": self.direccion,
-            "email": self.email
+            "email": self.email,
+            "detalle_servicios": self.detalle_servicios or ""
         }

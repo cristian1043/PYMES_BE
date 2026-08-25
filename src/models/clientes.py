@@ -12,6 +12,11 @@ class Clientes(Base):
     telefono = Column(String(20), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow) 
+    tiene_tarjeta = Column(String(5), default='No')
+    tipo_tarjeta = Column(String(50))
+    banco_tarjeta = Column(String(100))
+    franquicia_tarjeta = Column(String(50))
+    ultimos_digitos_tarjeta = Column(String(4))
 
     def save(self):
         session.add(self)
@@ -44,5 +49,10 @@ class Clientes(Base):
             "direccion": self.direccion,
             "telefono": self.telefono,
             "email": self.email,
-            "created_at": self.created_at
+            "created_at": self.created_at,
+            "tiene_tarjeta": self.tiene_tarjeta or 'No',
+            "tipo_tarjeta": self.tipo_tarjeta,
+            "banco_tarjeta": self.banco_tarjeta,
+            "franquicia_tarjeta": self.franquicia_tarjeta,
+            "ultimos_digitos_tarjeta": self.ultimos_digitos_tarjeta
         }

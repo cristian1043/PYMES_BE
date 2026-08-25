@@ -18,6 +18,7 @@ class Compras(Base):
  
     id_proveedor = Column(Integer, ForeignKey('proveedores.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    estado = Column(String(20), default='Completada')
 
     def create(self):
         session.add(self)
@@ -51,6 +52,7 @@ class Compras(Base):
             "iva": self.iva,
             "descuento": self.descuento,
             "total": self.total,
+            "estado": self.estado or "Completada",
             "id_proveedor": self.id_proveedor,
             "id_usuario": self.id_usuario
         }

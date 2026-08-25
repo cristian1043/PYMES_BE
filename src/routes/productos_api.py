@@ -22,6 +22,14 @@ def get_productos():
     return jsonify([c.to_dict() for c in productos]), 200
 
 # ===========================
+# Obtener el siguiente código de producto
+# ===========================
+@productos_bp.route("/siguiente_codigo", methods=["GET"])
+def get_siguiente_codigo():
+    codigo = ProductosController.obtener_siguiente_codigo()
+    return jsonify({"siguiente_codigo": codigo}), 200
+
+# ===========================
 # Obtener un producto por ID
 # ===========================
 @productos_bp.route("/<int:id>", methods=["GET"])

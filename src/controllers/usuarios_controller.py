@@ -26,6 +26,11 @@ class UsuariosController:
         return Usuarios.get_by_id(id)
 
     @staticmethod
+    def get_by_documento(documento):
+        DatabaseMigrations.ejecutar_migraciones()
+        return session.query(Usuarios).filter(Usuarios.documento == str(documento).strip()).first()
+
+    @staticmethod
     def create(data):
         DatabaseMigrations.ejecutar_migraciones()
         id_rol = int(data.get("id_rol")) if data.get("id_rol") else 2

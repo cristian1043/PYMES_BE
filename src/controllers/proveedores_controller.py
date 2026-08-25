@@ -25,7 +25,8 @@ class ProveedoresController:
         proveedor.telefono = data.get("telefono", "")
         proveedor.direccion = data.get("direccion", "")
         proveedor.email = data.get("email", "")
-        proveedor.create()
+        proveedor.detalle_servicios = data.get("detalle_servicios", "")
+        proveedor.save()
         return proveedor
 
     @staticmethod
@@ -40,6 +41,7 @@ class ProveedoresController:
         proveedor.telefono = data.get("telefono", proveedor.telefono)
         proveedor.direccion = data.get("direccion", proveedor.direccion)
         proveedor.email = data.get("email", proveedor.email)
+        proveedor.detalle_servicios = data.get("detalle_servicios", proveedor.detalle_servicios)
         proveedor.update()
         return proveedor
 

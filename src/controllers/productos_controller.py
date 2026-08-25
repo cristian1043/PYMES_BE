@@ -24,6 +24,17 @@ class ProductosController:
 
 
     @staticmethod
+    def obtener_siguiente_codigo():
+        productos = Productos.get()
+        max_num = 0
+        for p in productos:
+            if p.codigo and p.codigo.startswith("PROD-"):
+                num_part = p.codigo.replace("PROD-", "")
+                if num_part.isdigit():
+                    max_num = max(max_num, int(num_part))
+        return f"PROD-{max_num + 1:03d}"
+
+    @staticmethod
     def create(data):
         producto = Productos()
         producto.nombre = data.get("nombre", "")
@@ -39,9 +50,9 @@ class ProductosController:
         prov_id = data.get("id_proveedor")
         producto.id_proveedor = int(prov_id) if prov_id else None
 
-        # Generar código único si no se proporcionó uno
+        # Generar código único secuencial (PROD-001, PROD-002, etc)
         cod = data.get("codigo")
-        producto.codigo = str(cod) if cod else f"PROD-{uuid.uuid4().hex[:6].upper()}"
+        producto.codigo = str(cod) if cod else ProductosController.obtener_siguiente_codigo()
         producto.unidad_medida = data.get("unidad_medida", "UND")
         
         producto.create()
