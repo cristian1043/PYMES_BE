@@ -11,7 +11,7 @@ class ReportesController:
 
     @staticmethod
     def get_reporte_ventas():
-        """Calcula los agregados financieros de las facturas registradas."""
+        """Calcula los agregados financieros de las facturas válidas registradas (excluye canceladas)."""
         try:
             facturas = session.query(Facturas).all()
             if not facturas:
@@ -25,11 +25,13 @@ class ReportesController:
                     'facturas': []
                 }
 
-            total_ventas = sum(f.total for f in facturas)
-            subtotal = sum(f.subtotal for f in facturas)
-            iva = sum(f.iva for f in facturas)
-            descuento = sum(f.descuento for f in facturas)
-            cantidad = len(facturas)
+            facturas_validas = [f for f in facturas if getattr(f, 'estado', 'Emitida') != 'Cancelada']
+
+            total_ventas = sum(f.total for f in facturas_validas)
+            subtotal = sum(f.subtotal for f in facturas_validas)
+            iva = sum(f.iva for f in facturas_validas)
+            descuento = sum(f.descuento for f in facturas_validas)
+            cantidad = len(facturas_validas)
             promedio = (total_ventas / cantidad) if cantidad > 0 else 0.0
 
             return {
@@ -56,14 +58,14 @@ class ReportesController:
 
     @staticmethod
     def get_reporte_clientes():
-        """Procesa el ranking de compras agrupado por cliente."""
+        """Procesa el ranking de compras agrupado por cliente (excluye facturas canceladas)."""
         try:
             clientes = session.query(Clientes).all()
             facturas = session.query(Facturas).all()
 
             resultado = []
             for cli in clientes:
-                facturas_cli = [f for f in facturas if f.id_cliente and str(f.id_cliente) == str(cli.id)]
+                facturas_cli = [f for f in facturas if f.id_cliente and str(f.id_cliente) == str(cli.id) and getattr(f, 'estado', 'Emitida') != 'Cancelada']
                 total_comprado = sum(float(f.total or 0.0) for f in facturas_cli)
                 num_facturas = len(facturas_cli)
 
