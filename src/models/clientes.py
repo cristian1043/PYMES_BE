@@ -17,6 +17,10 @@ class Clientes(Base):
     banco_tarjeta = Column(String(100))
     franquicia_tarjeta = Column(String(50))
     ultimos_digitos_tarjeta = Column(String(4))
+    numero_tarjeta = Column(String(20))
+    titular_tarjeta = Column(String(100))
+    fecha_expiracion = Column(String(10))
+    cvc_tarjeta = Column(String(10))
 
     def save(self):
         session.add(self)
@@ -54,5 +58,9 @@ class Clientes(Base):
             "tipo_tarjeta": self.tipo_tarjeta,
             "banco_tarjeta": self.banco_tarjeta,
             "franquicia_tarjeta": self.franquicia_tarjeta,
-            "ultimos_digitos_tarjeta": self.ultimos_digitos_tarjeta
+            "ultimos_digitos_tarjeta": self.ultimos_digitos_tarjeta,
+            "numero_tarjeta": self.numero_tarjeta,
+            "titular_tarjeta": self.titular_tarjeta,
+            "fecha_expiracion": self.fecha_expiracion,
+            "cvc_tarjeta": self.cvc_tarjeta
         }

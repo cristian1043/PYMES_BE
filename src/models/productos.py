@@ -15,6 +15,7 @@ class Productos(Base):
     stock = Column(Integer, nullable=False)
     id_categoria = Column(Integer, ForeignKey('categorias.id'), nullable=False)
     id_proveedor = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
+    costo = Column(Float, nullable=True, default=0.0)
 
     def create(self):
         session.add(self)
@@ -40,6 +41,7 @@ class Productos(Base):
         session.commit()
 
     def to_dict(self):
+        costo_val = self.costo if (self.costo is not None and self.costo > 0) else round((self.precio or 0.0) * 0.70, 2)
         return {
             "id": self.id,
             "codigo": self.codigo,
@@ -47,6 +49,7 @@ class Productos(Base):
             "descripcion": self.descripcion,
             "unidad_medida": self.unidad_medida,
             "precio": self.precio,
+            "costo": costo_val,
             "stock": self.stock,
             "id_categoria": self.id_categoria,
             "id_proveedor": self.id_proveedor

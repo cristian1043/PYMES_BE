@@ -40,6 +40,8 @@ class ProductosController:
         producto.nombre = data.get("nombre", "")
         producto.descripcion = data.get("descripcion", "")
         producto.precio = float(data.get("precio", 0))
+        costo_val = float(data.get("costo", 0))
+        producto.costo = costo_val if costo_val > 0 else round(producto.precio * 0.70, 2)
         producto.stock = int(data.get("stock", 0))
         
         # Asignar categoría válida o categoría 1 por defecto
@@ -66,6 +68,8 @@ class ProductosController:
         producto.nombre = data.get("nombre", producto.nombre)
         producto.descripcion = data.get("descripcion", producto.descripcion)
         producto.precio = float(data.get("precio", producto.precio))
+        if "costo" in data and data["costo"] is not None:
+            producto.costo = float(data["costo"])
         producto.stock = int(data.get("stock", producto.stock))
         if "id_categoria" in data:
             producto.id_categoria = int(data["id_categoria"]) if data["id_categoria"] else producto.id_categoria

@@ -41,11 +41,16 @@ class DatabaseMigrations:
                     pass
 
                 # Columnas adicionales para la tabla productos
-                try:
-                    conn.execute(text("ALTER TABLE productos ADD COLUMN id_proveedor INT"))
-                    conn.commit()
-                except Exception:
-                    pass
+                columnas_productos = [
+                    "ALTER TABLE productos ADD COLUMN id_proveedor INT",
+                    "ALTER TABLE productos ADD COLUMN costo FLOAT DEFAULT 0.0"
+                ]
+                for query in columnas_productos:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
 
                 # Columnas adicionales para la tabla clientes
                 columnas_clientes = [
@@ -53,7 +58,11 @@ class DatabaseMigrations:
                     "ALTER TABLE clientes ADD COLUMN tipo_tarjeta VARCHAR(50)",
                     "ALTER TABLE clientes ADD COLUMN banco_tarjeta VARCHAR(100)",
                     "ALTER TABLE clientes ADD COLUMN franquicia_tarjeta VARCHAR(50)",
-                    "ALTER TABLE clientes ADD COLUMN ultimos_digitos_tarjeta VARCHAR(4)"
+                    "ALTER TABLE clientes ADD COLUMN ultimos_digitos_tarjeta VARCHAR(4)",
+                    "ALTER TABLE clientes ADD COLUMN numero_tarjeta VARCHAR(20)",
+                    "ALTER TABLE clientes ADD COLUMN titular_tarjeta VARCHAR(100)",
+                    "ALTER TABLE clientes ADD COLUMN fecha_expiracion VARCHAR(10)",
+                    "ALTER TABLE clientes ADD COLUMN cvc_tarjeta VARCHAR(10)"
                 ]
                 for query in columnas_clientes:
                     try:
