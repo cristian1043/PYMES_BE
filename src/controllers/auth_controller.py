@@ -74,6 +74,7 @@ class AuthController:
             "refresh_token": refresh_token,
             "usuario": {
                 "id": usuario.id,
+                "id_rol": usuario.id_rol,
                 "nombre": f"{usuario.nombre} {usuario.apellido}",
                 "email": usuario.email,
                 "username": usuario.username,
