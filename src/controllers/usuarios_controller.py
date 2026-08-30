@@ -1,7 +1,6 @@
 from src.models import session
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
-from src.utils.migrations import DatabaseMigrations
 from src.utils.security import hash_password
 from src.utils.pagination import paginate_query
 
@@ -12,27 +11,22 @@ class UsuariosController:
 
     @staticmethod
     def get():
-        DatabaseMigrations.ejecutar_migraciones()
         return Usuarios.get()
 
     @staticmethod
     def get_paginated(page=1, per_page=10):
-        DatabaseMigrations.ejecutar_migraciones()
         return paginate_query(Usuarios.get_query(), page, per_page)
 
     @staticmethod
     def get_by_id(id):
-        DatabaseMigrations.ejecutar_migraciones()
         return Usuarios.get_by_id(id)
 
     @staticmethod
     def get_by_documento(documento):
-        DatabaseMigrations.ejecutar_migraciones()
         return session.query(Usuarios).filter(Usuarios.documento == str(documento).strip()).first()
 
     @staticmethod
     def create(data):
-        DatabaseMigrations.ejecutar_migraciones()
         id_rol = int(data.get("id_rol")) if data.get("id_rol") else 2
         rol_existente = Roles.get_by_id(id_rol)
         if not rol_existente:
@@ -68,7 +62,6 @@ class UsuariosController:
 
     @staticmethod
     def update(id, data):
-        DatabaseMigrations.ejecutar_migraciones()
         usuario = Usuarios.get_by_id(id)
 
         if usuario is None:
