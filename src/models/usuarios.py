@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, func
 from src.models import Base, session
 
 class Usuarios(Base):
@@ -37,8 +37,14 @@ class Usuarios(Base):
 
     @staticmethod
     def get_by_login(login_val):
+        if not login_val:
+            return None
+        val = str(login_val).strip().lower()
         return session.query(Usuarios).filter(
-            (Usuarios.email == login_val) | (Usuarios.username == login_val)
+            (func.lower(Usuarios.email) == val) |
+            (func.lower(Usuarios.username) == val) |
+            (func.lower(Usuarios.email) == val + "@pymesoft.com") |
+            (func.lower(Usuarios.username) == val + "@pymesoft.com")
         ).first()
 
     def update(self):
