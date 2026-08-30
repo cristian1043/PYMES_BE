@@ -12,8 +12,6 @@ class AuthController:
 
     @staticmethod
     def login(email_or_username, password):
-        DatabaseMigrations.ejecutar_migraciones()
-        
         if not email_or_username or not password:
             return {"exito": False, "mensaje": "Correo/Usuario y contraseña son requeridos"}, 400
 

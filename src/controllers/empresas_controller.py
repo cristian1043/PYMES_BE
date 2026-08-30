@@ -1,11 +1,9 @@
 from src.models.empresas import Empresas
-from src.utils.migrations import DatabaseMigrations
 
 class EmpresasController:
 
     @staticmethod
     def get():
-        DatabaseMigrations.ejecutar_migraciones()
         empresas = Empresas.get()
         if not empresas:
             emp1 = Empresas()
@@ -31,12 +29,10 @@ class EmpresasController:
 
     @staticmethod
     def get_by_id(id):
-        DatabaseMigrations.ejecutar_migraciones()
         return Empresas.get_by_id(id)
 
     @staticmethod
     def create(data):
-        DatabaseMigrations.ejecutar_migraciones()
         nit = data.get("nit")
         if nit and session.query(Empresas).filter_by(nit=nit).first():
             raise Exception(f"Ya existe una empresa registrada con el NIT '{nit}'.")
@@ -53,7 +49,6 @@ class EmpresasController:
 
     @staticmethod
     def update(id, data):
-        DatabaseMigrations.ejecutar_migraciones()
         empresa = Empresas.get_by_id(id)
         if not empresa:
             return None
