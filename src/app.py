@@ -82,6 +82,9 @@ from src.routes import (
     usuario_empresas_bp
 )
 
+# Aplicar Rate Limit estricto a login contra ataques de Fuerza Bruta (máx 5 intentos/minuto por IP)
+limiter.limit("5 per minute")(auth_bp)
+
 # Registrar todos los Blueprints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(categorias_bp, url_prefix="/api/categorias")
@@ -98,6 +101,13 @@ app.register_blueprint(metodos_pago_bp, url_prefix="/api/metodos_pago")
 app.register_blueprint(reportes_bp, url_prefix="/api/reportes")
 app.register_blueprint(empresas_bp, url_prefix="/api/empresas")
 app.register_blueprint(usuario_empresas_bp, url_prefix="/api/usuario_empresas")
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "exito": False,
+        "mensaje": "⚠️ Demasiados intentos fallidos de inicio de sesión. Bloqueo de seguridad activado. Por favor espera 1 minuto."
+    }), 429
 
 @app.errorhandler(500)
 def handle_500_error(e):
