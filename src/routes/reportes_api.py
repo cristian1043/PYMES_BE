@@ -35,3 +35,21 @@ def get_reporte_top_productos():
     ranking = ReportesController.get_reporte_top_productos()
     return jsonify(ranking), 200
 
+# ===========================
+# Métricas del Dashboard Ejecutivo
+# ===========================
+@reportes_bp.route("/dashboard", methods=["GET"])
+def get_reporte_dashboard():
+    ventas = ReportesController.get_reporte_ventas()
+    inventario = ReportesController.get_reporte_inventario()
+    return jsonify({
+        'total_ventas': ventas.get('total_ventas', 0.0),
+        'cantidad_facturas': ventas.get('cantidad_facturas', 0),
+        'promedio_venta': ventas.get('promedio_venta', 0.0),
+        'iva_total': ventas.get('iva', 0.0),
+        'total_productos': inventario.get('total_productos', 0),
+        'valor_inventario': inventario.get('valor_total_inventario', 0.0),
+        'stock_bajo': inventario.get('productos_bajo_stock', 0)
+    }), 200
+
+
