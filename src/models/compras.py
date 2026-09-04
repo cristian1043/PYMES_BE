@@ -44,6 +44,7 @@ class Compras(Base):
         session.commit()
    
     def to_dict(self):
+        prov = session.query(Proveedores).filter_by(id=self.id_proveedor).first() if self.id_proveedor else None
         return {
             "id": self.id,
             "numero": self.numero,
@@ -54,5 +55,6 @@ class Compras(Base):
             "total": self.total,
             "estado": self.estado or "Completada",
             "id_proveedor": self.id_proveedor,
+            "proveedor_nombre": prov.nombre if prov else f"Proveedor #{self.id_proveedor}",
             "id_usuario": self.id_usuario
         }

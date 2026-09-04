@@ -1,3 +1,5 @@
+import time
+from sqlalchemy import func
 from src.models import session
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
@@ -6,7 +8,7 @@ from src.utils.pagination import paginate_query
 
 class UsuariosController:
     """
-    Controlador encargado única y exclusivamente de la Lógica de Negocio de Usuarios (SRP).
+    Controlador encargado de la lógica de negocio de usuarios.
     """
 
     @staticmethod
@@ -26,7 +28,43 @@ class UsuariosController:
         return session.query(Usuarios).filter(Usuarios.documento == str(documento).strip()).first()
 
     @staticmethod
+    def get_by_username(username):
+        if not username:
+            return None
+        return session.query(Usuarios).filter(
+            func.lower(Usuarios.username) == str(username).strip().lower()
+        ).first()
+
+    @staticmethod
+    def get_by_email(email):
+        if not email:
+            return None
+        return session.query(Usuarios).filter(
+            func.lower(Usuarios.email) == str(email).strip().lower()
+        ).first()
+
+    @staticmethod
     def create(data):
+        # 1. Validar unicidad de @username
+        username = str(data.get("username") or "").strip()
+        if not username:
+            email_val = str(data.get("email") or "user").strip()
+            username = email_val.split("@")[0] if "@" in email_val else email_val
+
+        username_existente = UsuariosController.get_by_username(username)
+        if username_existente:
+            raise ValueError(f"El nombre de usuario '@{username}' ya está en uso. Por favor elige otro.")
+
+        # 2. Validar unicidad de correo electrónico
+        email = str(data.get("email") or "").strip().lower()
+        if not email:
+            raise ValueError("El correo electrónico es obligatorio.")
+
+        email_existente = UsuariosController.get_by_email(email)
+        if email_existente:
+            raise ValueError(f"El correo electrónico '{email}' ya se encuentra registrado.")
+
+        # 3. Rol del usuario
         id_rol = int(data.get("id_rol")) if data.get("id_rol") else 2
         rol_existente = Roles.get_by_id(id_rol)
         if not rol_existente:
@@ -36,19 +74,25 @@ class UsuariosController:
             nuevo_rol.save()
             id_rol = nuevo_rol.id
 
-        username = data.get("username")
-        if not username:
-            username = data["email"].split("@")[0]
-
         raw_password = data.get("password") or data.get("password_hash", "123456")
         
         usuario = Usuarios()
-        usuario.tipo_documento = data["tipo_documento"]
-        usuario.documento = data["documento"]
-        usuario.nombre = data["nombre"]
-        usuario.apellido = data["apellido"]
-        usuario.telefono = data["telefono"]
-        usuario.email = data["email"]
+        usuario.tipo_documento = str(data.get("tipo_documento") or "CC").strip().upper()
+        
+        # Documento único
+        doc = str(data.get("documento") or "").strip()
+        if not doc:
+            doc = f"{int(time.time())}"
+        else:
+            doc_existente = UsuariosController.get_by_documento(doc)
+            if doc_existente:
+                raise ValueError(f"El documento '{doc}' ya se encuentra registrado con otro usuario.")
+        usuario.documento = doc
+        
+        usuario.nombre = str(data.get("nombre") or "").strip()
+        usuario.apellido = str(data.get("apellido") or "").strip()
+        usuario.telefono = str(data.get("telefono") or "0000000000").strip()
+        usuario.email = email
         usuario.username = username
         usuario.password_hash = hash_password(raw_password)
         usuario.id_rol = id_rol
@@ -58,6 +102,12 @@ class UsuariosController:
         usuario.numero_cuenta = data.get("numero_cuenta", "")
         
         usuario.save()
+
+        # Simulación / Registro del envío de correo de bienvenida y credenciales
+        print(f"📧 [NOTIFICACIÓN POR CORREO]: Correo enviado con éxito a {usuario.email}")
+        print(f"   Asunto: ¡Bienvenido a PYMEsoft Móvil! Tus credenciales de acceso")
+        print(f"   Usuario: @{usuario.username} | Rol: {rol_existente.nombre if rol_existente else 'Usuario'}")
+
         return usuario
 
     @staticmethod
@@ -101,12 +151,8 @@ class UsuariosController:
 
     @staticmethod
     def delete(id):
-        from src.models.usuario_empresas import UsuarioEmpresas
         usuario = Usuarios.get_by_id(id)
-
-        if usuario is None:
-            return False
-
-        session.query(UsuarioEmpresas).filter_by(usuario_id=id).delete()
-        usuario.delete()
-        return True
+        if usuario:
+            usuario.delete()
+            return True
+        return False

@@ -82,8 +82,8 @@ from src.routes import (
     usuario_empresas_bp
 )
 
-# Aplicar Rate Limit estricto a login contra ataques de Fuerza Bruta (máx 5 intentos/minuto por IP)
-limiter.limit("5 per minute")(auth_bp)
+# Aplicar Rate Limit a login contra ataques de Fuerza Bruta (máx 10 intentos/minuto por IP)
+limiter.limit("10 per minute")(auth_bp)
 
 # Registrar todos los Blueprints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -121,4 +121,4 @@ def handle_500_error(e):
     return jsonify({"error": "Error interno del servidor", "detalle": str(original)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)

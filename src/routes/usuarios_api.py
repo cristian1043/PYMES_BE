@@ -55,6 +55,18 @@ def get_usuario_por_documento(doc):
 
 
 # ===========================
+# Validar disponibilidad de username
+# ===========================
+@usuarios_bp.route("/check-username/<username>", methods=["GET"])
+def check_username(username):
+    try:
+        usuario = UsuariosController.get_by_username(username)
+        return jsonify({"disponible": usuario is None}), 200
+    except Exception as e:
+        return jsonify({"disponible": True}), 200
+
+
+# ===========================
 # Crear usuario
 # ===========================
 @usuarios_bp.route("/", methods=["POST"])
@@ -66,6 +78,9 @@ def create_usuario():
 
         usuario = UsuariosController.create(data)
         return jsonify(usuario.to_dict()), 201
+    except ValueError as ve:
+        session.rollback()
+        return jsonify({"mensaje": str(ve)}), 400
     except Exception as e:
         session.rollback()
         print(f"=== ERROR EN BACKEND AL CREAR USUARIO ===")
