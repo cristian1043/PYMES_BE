@@ -52,9 +52,8 @@ class ProductosController:
         prov_id = data.get("id_proveedor")
         producto.id_proveedor = int(prov_id) if prov_id else None
 
-        # Generar código único secuencial (PROD-001, PROD-002, etc)
-        cod = data.get("codigo")
-        producto.codigo = str(cod) if cod else ProductosController.obtener_siguiente_codigo()
+        # Generar código único secuencial (PROD-001, PROD-002, etc) siempre automático e inmutable
+        producto.codigo = ProductosController.obtener_siguiente_codigo()
         producto.unidad_medida = data.get("unidad_medida", "UND")
         
         producto.create()
@@ -75,8 +74,7 @@ class ProductosController:
             producto.id_categoria = int(data["id_categoria"]) if data["id_categoria"] else producto.id_categoria
         if "id_proveedor" in data:
             producto.id_proveedor = int(data["id_proveedor"]) if data["id_proveedor"] else None
-        if "codigo" in data:
-            producto.codigo = data["codigo"]
+        # El código del producto no puede ser modificado bajo ninguna circunstancia
         if "unidad_medida" in data:
             producto.unidad_medida = data["unidad_medida"]
         producto.update()
