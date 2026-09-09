@@ -103,7 +103,7 @@ class ReportesController:
 
             valor_total = sum(p.precio * p.stock for p in productos)
             total_prods = len(productos)
-            bajo_stock = [p for p in productos if p.stock <= 10]
+            bajo_stock = [p for p in productos if (p.stock or 0) <= 2500]
 
             return {
                 'valor_total_inventario': valor_total,
