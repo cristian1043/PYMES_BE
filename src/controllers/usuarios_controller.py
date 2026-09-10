@@ -104,8 +104,8 @@ class UsuariosController:
         usuario.save()
 
         # Simulación / Registro del envío de correo de bienvenida y credenciales
-        print(f"📧 [NOTIFICACIÓN POR CORREO]: Correo enviado con éxito a {usuario.email}")
-        print(f"   Asunto: ¡Bienvenido a PYMEsoft Móvil! Tus credenciales de acceso")
+        print(f"[NOTIFICACION POR CORREO]: Correo enviado con exito a {usuario.email}")
+        print(f"   Asunto: Bienvenido a PYMEsoft Movil! Tus credenciales de acceso")
         print(f"   Usuario: @{usuario.username} | Rol: {rol_existente.nombre if rol_existente else 'Usuario'}")
 
         return usuario

@@ -73,3 +73,41 @@ def me():
         return jsonify(resultado), status_code
     except Exception as e:
         return jsonify({"mensaje": f"Error al obtener perfil: {str(e)}"}), 500
+
+@auth_bp.route("/cambiar-password", methods=["POST"])
+def cambiar_password():
+    try:
+        data = request.get_json() or {}
+        usuario_id = data.get("usuario_id")
+        password_actual = data.get("password_actual")
+        password_nueva = data.get("password_nueva")
+
+        resultado, status_code = AuthController.cambiar_password(usuario_id, password_actual, password_nueva)
+        return jsonify(resultado), status_code
+    except Exception as e:
+        print(f"Error en /api/auth/cambiar-password: {str(e)}")
+        return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
+
+@auth_bp.route("/recuperar-password-solicitar", methods=["POST"])
+def recuperar_password_solicitar():
+    try:
+        data = request.get_json() or {}
+        identificador = data.get("identificador") or data.get("email") or data.get("username")
+        resultado, status_code = AuthController.solicitar_recuperacion(identificador)
+        return jsonify(resultado), status_code
+    except Exception as e:
+        print(f"Error en /api/auth/recuperar-password-solicitar: {str(e)}")
+        return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
+
+@auth_bp.route("/recuperar-password-confirmar", methods=["POST"])
+def recuperar_password_confirmar():
+    try:
+        data = request.get_json() or {}
+        token_o_codigo = data.get("token") or data.get("codigo")
+        password_nueva = data.get("password_nueva") or data.get("password")
+        resultado, status_code = AuthController.confirmar_recuperacion(token_o_codigo, password_nueva)
+        return jsonify(resultado), status_code
+    except Exception as e:
+        print(f"Error en /api/auth/recuperar-password-confirmar: {str(e)}")
+        return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
+
