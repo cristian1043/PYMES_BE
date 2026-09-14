@@ -55,6 +55,8 @@ class ProductosController:
         # Generar código único secuencial (PROD-001, PROD-002, etc) siempre automático e inmutable
         producto.codigo = ProductosController.obtener_siguiente_codigo()
         producto.unidad_medida = data.get("unidad_medida", "UND")
+        producto.estado = data.get("estado", "Activo")
+        producto.imagen = data.get("imagen", None)
         
         producto.create()
         return producto
@@ -74,19 +76,30 @@ class ProductosController:
             producto.id_categoria = int(data["id_categoria"]) if data["id_categoria"] else producto.id_categoria
         if "id_proveedor" in data:
             producto.id_proveedor = int(data["id_proveedor"]) if data["id_proveedor"] else None
-        # El código del producto no puede ser modificado bajo ninguna circunstancia
         if "unidad_medida" in data:
             producto.unidad_medida = data["unidad_medida"]
+        if "estado" in data:
+            producto.estado = data["estado"]
+        if "imagen" in data:
+            producto.imagen = data["imagen"]
         producto.update()
         return producto
 
+    @staticmethod
+    def desactivar(id, estado="Inactivo"):
+        producto = Productos.get_by_id(id)
+        if producto is None:
+            return None
+        producto.estado = estado
+        producto.update()
+        return producto
 
     @staticmethod
     def delete(id):
-
         producto = Productos.get_by_id(id)
         if producto is None:
             return "Producto no encontrado"
-        producto.delete()
-
-        return True and "Producto eliminado correctamente"
+        # Desactivación lógica (Soft-Delete) para proteger integridad referencial de compras y facturas
+        producto.estado = "Inactivo"
+        producto.update()
+        return True and "Producto desactivado correctamente"

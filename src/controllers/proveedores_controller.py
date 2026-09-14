@@ -26,6 +26,7 @@ class ProveedoresController:
         proveedor.direccion = data.get("direccion", "")
         proveedor.email = data.get("email", "")
         proveedor.detalle_servicios = data.get("detalle_servicios", "")
+        proveedor.estado = data.get("estado", "Activo")
         proveedor.save()
         return proveedor
 
@@ -42,6 +43,17 @@ class ProveedoresController:
         proveedor.direccion = data.get("direccion", proveedor.direccion)
         proveedor.email = data.get("email", proveedor.email)
         proveedor.detalle_servicios = data.get("detalle_servicios", proveedor.detalle_servicios)
+        if "estado" in data:
+            proveedor.estado = data["estado"]
+        proveedor.update()
+        return proveedor
+
+    @staticmethod
+    def desactivar(id, estado="Inactivo"):
+        proveedor = Proveedores.get_by_id(id)
+        if proveedor is None:
+            return None
+        proveedor.estado = estado
         proveedor.update()
         return proveedor
 
@@ -52,5 +64,7 @@ class ProveedoresController:
         if proveedor is None:
             return False
 
-        proveedor.delete()
+        # Desactivación lógica (Soft-Delete) para proteger historial de compras
+        proveedor.estado = "Inactivo"
+        proveedor.update()
         return True

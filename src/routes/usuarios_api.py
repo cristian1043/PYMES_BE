@@ -124,6 +124,24 @@ def update_usuario(id):
 
 
 # ===========================
+# Cambiar estado del usuario (Activar / Desactivar)
+# ===========================
+@usuarios_bp.route("/<int:id>/estado", methods=["PATCH"])
+@jwt_required(optional=True)
+def toggle_estado_usuario(id):
+    try:
+        data = request.get_json() or {}
+        nuevo_estado = data.get("estado", "Inactivo")
+        usuario = UsuariosController.desactivar(id, estado=nuevo_estado)
+        if usuario:
+            return jsonify({"mensaje": f"Usuario actualizado a estado {nuevo_estado}", "usuario": usuario.to_dict()}), 200
+        return jsonify({"mensaje": "Usuario no encontrado"}), 404
+    except Exception as e:
+        session.rollback()
+        return jsonify({"mensaje": str(e)}), 400
+
+
+# ===========================
 # Eliminar usuario
 # ===========================
 @usuarios_bp.route("/<int:id>", methods=["DELETE"])
@@ -131,7 +149,7 @@ def delete_usuario(id):
     try:
         eliminado = UsuariosController.delete(id)
         if eliminado:
-            return jsonify({"mensaje": "Usuario eliminado correctamente"}), 200
+            return jsonify({"mensaje": "Usuario desactivado correctamente"}), 200
         return jsonify({"mensaje": "Usuario no encontrado"}), 404
     except Exception as e:
         session.rollback()

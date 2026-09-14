@@ -22,6 +22,7 @@ class Usuarios(Base):
     lugar_residencia = Column(String(200), nullable=True)
     estado_civil = Column(String(50), nullable=True)
     numero_hijos = Column(Integer, default=0, nullable=True)
+    sesion_version = Column(Integer, default=1, nullable=True)
 
     def save(self):
         session.add(self)
@@ -76,5 +77,6 @@ class Usuarios(Base):
             "fecha_nacimiento": self.fecha_nacimiento or "",
             "lugar_residencia": self.lugar_residencia or "",
             "estado_civil": self.estado_civil or "",
-            "numero_hijos": self.numero_hijos if self.numero_hijos is not None else 0
+            "numero_hijos": self.numero_hijos if self.numero_hijos is not None else 0,
+            "sesion_version": getattr(self, "sesion_version", 1) or 1
         }

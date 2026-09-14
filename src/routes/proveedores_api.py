@@ -58,6 +58,19 @@ def update_proveedor(id):
 
 
 # ===========================
+# Cambiar estado del proveedor (Activar / Desactivar)
+# ===========================
+@proveedores_bp.route("/<int:id>/estado", methods=["PATCH"])
+@jwt_required(optional=True)
+def toggle_estado_proveedor(id):
+    data = request.get_json() or {}
+    nuevo_estado = data.get("estado", "Inactivo")
+    proveedor = ProveedoresController.desactivar(id, estado=nuevo_estado)
+    if proveedor and hasattr(proveedor, "to_dict"):
+        return jsonify({"mensaje": f"Proveedor actualizado a estado {nuevo_estado}", "proveedor": proveedor.to_dict()}), 200
+    return jsonify({"mensaje": "Proveedor no encontrado"}), 404
+
+# ===========================
 # Eliminar proveedor
 # ===========================
 @proveedores_bp.route("/<int:id>", methods=["DELETE"])
@@ -65,7 +78,7 @@ def delete_proveedor(id):
     eliminado = ProveedoresController.delete(id)
     if eliminado:
         return jsonify({
-            "mensaje": "Proveedor eliminado correctamente"
+            "mensaje": "Proveedor desactivado correctamente"
         }), 200
     return jsonify({
         "mensaje": "Proveedor no encontrado"

@@ -111,3 +111,14 @@ def recuperar_password_confirmar():
         print(f"Error en /api/auth/recuperar-password-confirmar: {str(e)}")
         return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
 
+@auth_bp.route("/logout-global", methods=["POST"])
+@jwt_required()
+def logout_global():
+    try:
+        current_user_id = get_jwt_identity()
+        resultado, status_code = AuthController.logout_global(current_user_id)
+        return jsonify(resultado), status_code
+    except Exception as e:
+        print(f"Error en /api/auth/logout-global: {str(e)}")
+        return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
+

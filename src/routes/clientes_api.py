@@ -17,6 +17,20 @@ def get_clientes():
     return jsonify(resultado), 200
 
 # ===========================
+# Buscar cliente por documento
+# ===========================
+@clientes_bp.route("/buscar", methods=["GET"])
+@jwt_required(optional=True)
+def buscar_cliente():
+    documento = request.args.get("documento")
+    if not documento:
+        return jsonify({"mensaje": "Parámetro 'documento' es requerido"}), 400
+    cliente = ClientesController.buscar_por_documento(documento)
+    if cliente and hasattr(cliente, "to_dict"):
+        return jsonify(cliente.to_dict()), 200
+    return jsonify({"mensaje": "Cliente no encontrado"}), 404
+
+# ===========================
 # Obtener un cliente por ID
 # ===========================
 @clientes_bp.route("/<int:id>", methods=["GET"])
@@ -52,6 +66,20 @@ def update_cliente(id):
     return jsonify({"mensaje": "Cliente no encontrado"}), 404
 
 # ===========================
+# Cambiar estado del cliente (Activar / Desactivar)
+# ===========================
+@clientes_bp.route("/<int:id>/estado", methods=["PATCH"])
+@jwt_required(optional=True)
+@roles_required("Administrador")
+def toggle_estado_cliente(id):
+    data = request.get_json() or {}
+    nuevo_estado = data.get("estado", "Inactivo")
+    cliente = ClientesController.desactivar(id, estado=nuevo_estado)
+    if cliente and hasattr(cliente, "to_dict"):
+        return jsonify({"mensaje": f"Cliente actualizado a estado {nuevo_estado}", "cliente": cliente.to_dict()}), 200
+    return jsonify({"mensaje": "Cliente no encontrado"}), 404
+
+# ===========================
 # Eliminar cliente
 # ===========================
 @clientes_bp.route("/<int:id>", methods=["DELETE"])
@@ -60,5 +88,5 @@ def update_cliente(id):
 def delete_cliente(id):
     eliminado = ClientesController.delete(id)
     if eliminado:
-        return jsonify({"mensaje": "Cliente eliminado correctamente"}), 200
+        return jsonify({"mensaje": "Cliente desactivado correctamente"}), 200
     return jsonify({"mensaje": "Cliente no encontrado"}), 404

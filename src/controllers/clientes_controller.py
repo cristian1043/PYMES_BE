@@ -25,8 +25,8 @@ class ClientesController:
         cliente.direccion = data.get("direccion", "")
         cliente.telefono = data.get("telefono", "")
         cliente.email = data.get("email", "")
-        if hasattr(cliente, 'tipo_documento'):
-            cliente.tipo_documento = data.get("tipo_documento", "CC")
+        cliente.tipo_documento = data.get("tipo_documento", "CC")
+        cliente.estado = data.get("estado", "Activo")
         
         cliente.tiene_tarjeta = data.get("tiene_tarjeta", "No")
         cliente.tipo_tarjeta = data.get("tipo_tarjeta")
@@ -55,8 +55,10 @@ class ClientesController:
         cliente.direccion = data.get("direccion", cliente.direccion)
         cliente.telefono = data.get("telefono", cliente.telefono)
         cliente.email = data.get("email", cliente.email)
-        if hasattr(cliente, 'tipo_documento'):
-            cliente.tipo_documento = data.get("tipo_documento", getattr(cliente, 'tipo_documento', 'CC'))
+        if "tipo_documento" in data:
+            cliente.tipo_documento = data["tipo_documento"]
+        if "estado" in data:
+            cliente.estado = data["estado"]
         
         if "tiene_tarjeta" in data:
             cliente.tiene_tarjeta = data["tiene_tarjeta"]
@@ -78,16 +80,28 @@ class ClientesController:
             cliente.cvc_tarjeta = data["cvc_tarjeta"]
 
         cliente.update()
-
         return cliente
+
+    @staticmethod
+    def desactivar(id, estado="Inactivo"):
+        cliente = Clientes.get_by_id(id)
+        if cliente is None:
+            return None
+        cliente.estado = estado
+        cliente.update()
+        return cliente
+
+    @staticmethod
+    def buscar_por_documento(documento):
+        return Clientes.get_by_documento(documento)
 
     @staticmethod
     def delete(id):
         cliente = Clientes.get_by_id(id)
-
         if cliente is None:
             return False
-
-        cliente.delete()
+        # Desactivación lógica (Soft-Delete) para proteger facturas e histórico
+        cliente.estado = "Inactivo"
+        cliente.update()
         return True
 

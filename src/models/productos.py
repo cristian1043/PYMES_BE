@@ -16,6 +16,8 @@ class Productos(Base):
     id_categoria = Column(Integer, ForeignKey('categorias.id'), nullable=False)
     id_proveedor = Column(Integer, ForeignKey('proveedores.id'), nullable=True)
     costo = Column(Float, nullable=True, default=0.0)
+    estado = Column(String(20), default="Activo")
+    imagen = Column(String, nullable=True)
 
     def create(self):
         session.add(self)
@@ -52,5 +54,7 @@ class Productos(Base):
             "costo": costo_val,
             "stock": self.stock,
             "id_categoria": self.id_categoria,
-            "id_proveedor": self.id_proveedor
+            "id_proveedor": self.id_proveedor,
+            "estado": self.estado or "Activo",
+            "imagen": self.imagen
         }

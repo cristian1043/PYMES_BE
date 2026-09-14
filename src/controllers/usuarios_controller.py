@@ -223,9 +223,20 @@ class UsuariosController:
         return usuario
 
     @staticmethod
+    def desactivar(id, estado="Inactivo"):
+        usuario = Usuarios.get_by_id(id)
+        if usuario is None:
+            return None
+        usuario.estado = estado
+        usuario.update()
+        return usuario
+
+    @staticmethod
     def delete(id):
         usuario = Usuarios.get_by_id(id)
         if usuario:
-            usuario.delete()
+            # Desactivación lógica (Soft-Delete) para proteger facturación, compras y auditoría
+            usuario.estado = "Inactivo"
+            usuario.update()
             return True
         return False

@@ -11,6 +11,7 @@ class Proveedores(Base):
     direccion = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     detalle_servicios = Column(String(500))
+    estado = Column(String(20), default='Activo', nullable=True)
 
     def save(self):
         session.add(self)
@@ -43,5 +44,6 @@ class Proveedores(Base):
             "telefono": self.telefono,
             "direccion": self.direccion,
             "email": self.email,
-            "detalle_servicios": self.detalle_servicios or ""
+            "detalle_servicios": self.detalle_servicios or "",
+            "estado": getattr(self, "estado", "Activo") or "Activo"
         }

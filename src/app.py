@@ -49,6 +49,29 @@ def custom_expired_token_response(jwt_header, jwt_payload):
 def custom_invalid_token_response(err_str):
     return jsonify({"exito": False, "mensaje": "Token de autenticación inválido o malformado.", "code": "invalid_token", "error": err_str}), 401
 
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_payload):
+    try:
+        user_id = jwt_payload.get("sub") or jwt_payload.get("usuario_id")
+        token_version = jwt_payload.get("sesion_version")
+        if user_id and token_version is not None:
+            user = Usuarios.get_by_id(int(user_id))
+            if user:
+                db_version = getattr(user, "sesion_version", 1) or 1
+                if int(token_version) < int(db_version):
+                    return True  # El token fue revocado por cierre de sesión global
+    except Exception:
+        pass
+    return False
+
+@jwt.revoked_token_loader
+def custom_revoked_token_response(jwt_header, jwt_payload):
+    return jsonify({
+        "exito": False,
+        "mensaje": "La sesión ha sido cerrada globalmente en todos los dispositivos. Por favor inicia sesión nuevamente.",
+        "code": "token_revoked"
+    }), 401
+
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 limiter = Limiter(get_remote_address, app=app, default_limits=["100000 per day", "10000 per hour"])
 

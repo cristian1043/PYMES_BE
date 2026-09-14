@@ -46,9 +46,32 @@ class Facturas(Base):
         session.commit()
          
     def to_dict(self):
+        cliente_nombre = "Cliente General"
+        cliente_doc = ""
+        cliente_tipo_doc = "CC"
+        try:
+            from src.models.clientes import Clientes
+            cliente = Clientes.get_by_id(self.id_cliente)
+            if cliente:
+                cliente_nombre = cliente.nombre
+                cliente_doc = cliente.documento
+                cliente_tipo_doc = getattr(cliente, "tipo_documento", "CC") or "CC"
+        except Exception:
+            pass
+
+        metodo_pago_nombre = "Efectivo"
+        try:
+            from src.models.metodos_pago import MetodosPago
+            metodo = MetodosPago.get_by_id(self.id_metodo_pago)
+            if metodo and hasattr(metodo, "nombre"):
+                metodo_pago_nombre = metodo.nombre
+        except Exception:
+            pass
+
         return {
             "id": self.id,
             "numero": self.numero,
+            "numero_factura": self.numero,
             "fecha": self.fecha.strftime('%Y-%m-%d %H:%M:%S') if hasattr(self.fecha, 'strftime') else str(self.fecha) if self.fecha else None,
             "subtotal": self.subtotal,
             "iva": self.iva,
@@ -56,7 +79,12 @@ class Facturas(Base):
             "total": self.total,
             "estado": self.estado or "Emitida",
             "id_cliente": self.id_cliente,
+            "cliente_id": self.id_cliente,
+            "cliente_nombre": cliente_nombre,
+            "cliente_documento": cliente_doc,
+            "cliente_tipo_documento": cliente_tipo_doc,
             "id_usuario": self.id_usuario,
-            "id_metodo_pago": self.id_metodo_pago
+            "id_metodo_pago": self.id_metodo_pago,
+            "metodo_pago": metodo_pago_nombre
         }
 

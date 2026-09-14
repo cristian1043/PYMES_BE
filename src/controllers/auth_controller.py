@@ -57,7 +57,8 @@ class AuthController:
             "email": usuario.email,
             "rol": nombre_rol,
             "id_rol": usuario.id_rol,
-            "empresas": empresas_ids
+            "empresas": empresas_ids,
+            "sesion_version": getattr(usuario, "sesion_version", 1) or 1
         }
 
         # Generar tokens con tiempos de expiración definidos
@@ -225,4 +226,18 @@ class AuthController:
             "exito": True,
             "mensaje": "Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."
         }, 200
+
+    @staticmethod
+    def logout_global(usuario_id):
+        try:
+            usuario = Usuarios.get_by_id(int(usuario_id))
+            if not usuario:
+                return {"exito": False, "mensaje": "Usuario no encontrado"}, 404
+            
+            actual_version = getattr(usuario, "sesion_version", 1) or 1
+            usuario.sesion_version = actual_version + 1
+            usuario.update()
+            return {"exito": True, "mensaje": "Sesión cerrada globalmente en todos los dispositivos"}, 200
+        except Exception as e:
+            return {"exito": False, "mensaje": f"Error al cerrar sesión global: {str(e)}"}, 500
 

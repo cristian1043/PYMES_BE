@@ -7,10 +7,12 @@ class Clientes(Base):
  
     id = Column(Integer, primary_key=True)
     documento = Column(String(50), unique=True, nullable=False)
+    tipo_documento = Column(String(20), default='CC', nullable=True)
     nombre = Column(String(100), nullable=False)
     direccion = Column(String(255), nullable=False)
     telefono = Column(String(20), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
+    estado = Column(String(20), default='Activo', nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow) 
     tiene_tarjeta = Column(String(5), default='No')
     tipo_tarjeta = Column(String(50))
@@ -38,6 +40,13 @@ class Clientes(Base):
     def get_by_id(id):
         return session.query(Clientes).filter_by(id=id).first()
 
+    @staticmethod
+    def get_by_documento(documento):
+        if not documento:
+            return None
+        doc_str = str(documento).strip()
+        return session.query(Clientes).filter(Clientes.documento == doc_str).first()
+
     def update(self):
         session.commit()
     
@@ -50,9 +59,11 @@ class Clientes(Base):
             "id": self.id,
             "nombre": self.nombre,
             "documento": self.documento,
+            "tipo_documento": getattr(self, "tipo_documento", "CC") or "CC",
             "direccion": self.direccion,
             "telefono": self.telefono,
             "email": self.email,
+            "estado": getattr(self, "estado", "Activo") or "Activo",
             "created_at": self.created_at,
             "tiene_tarjeta": self.tiene_tarjeta or 'No',
             "tipo_tarjeta": self.tipo_tarjeta,

@@ -21,7 +21,7 @@ class DatabaseMigrations:
                     "ALTER TABLE usuarios ADD COLUMN fecha_nacimiento VARCHAR(20)",
                     "ALTER TABLE usuarios ADD COLUMN lugar_residencia VARCHAR(200)",
                     "ALTER TABLE usuarios ADD COLUMN estado_civil VARCHAR(50)",
-                    "ALTER TABLE usuarios ADD COLUMN numero_hijos INT DEFAULT 0"
+                    "ALTER TABLE usuarios ADD COLUMN sesion_version INT DEFAULT 1"
                 ]
                 for query in columnas_usuarios:
                     try:
@@ -47,7 +47,9 @@ class DatabaseMigrations:
                 # Columnas adicionales para la tabla productos
                 columnas_productos = [
                     "ALTER TABLE productos ADD COLUMN id_proveedor INT",
-                    "ALTER TABLE productos ADD COLUMN costo FLOAT DEFAULT 0.0"
+                    "ALTER TABLE productos ADD COLUMN costo FLOAT DEFAULT 0.0",
+                    "ALTER TABLE productos ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
+                    "ALTER TABLE productos ADD COLUMN imagen TEXT"
                 ]
                 for query in columnas_productos:
                     try:
@@ -58,6 +60,8 @@ class DatabaseMigrations:
 
                 # Columnas adicionales para la tabla clientes
                 columnas_clientes = [
+                    "ALTER TABLE clientes ADD COLUMN tipo_documento VARCHAR(20) DEFAULT 'CC'",
+                    "ALTER TABLE clientes ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
                     "ALTER TABLE clientes ADD COLUMN tiene_tarjeta VARCHAR(5) DEFAULT 'No'",
                     "ALTER TABLE clientes ADD COLUMN tipo_tarjeta VARCHAR(50)",
                     "ALTER TABLE clientes ADD COLUMN banco_tarjeta VARCHAR(100)",
@@ -76,11 +80,16 @@ class DatabaseMigrations:
                         pass
 
                 # Columnas adicionales para la tabla proveedores
-                try:
-                    conn.execute(text("ALTER TABLE proveedores ADD COLUMN detalle_servicios VARCHAR(500)"))
-                    conn.commit()
-                except Exception:
-                    pass
+                columnas_proveedores = [
+                    "ALTER TABLE proveedores ADD COLUMN detalle_servicios VARCHAR(500)",
+                    "ALTER TABLE proveedores ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'"
+                ]
+                for query in columnas_proveedores:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
 
                 # Columnas adicionales para la tabla compras
                 columnas_compras = [

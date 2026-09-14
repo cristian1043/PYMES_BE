@@ -123,6 +123,43 @@ class FacturasController:
         if not fecha_factura:
             fecha_factura = datetime.now()
 
+        # Resolver o autovincular cliente
+        id_cliente = data.get("id_cliente") or data.get("cliente_id")
+        if not id_cliente:
+            doc_cliente = data.get("documento_cliente") or data.get("documento")
+            nom_cliente = data.get("cliente_nombre") or data.get("nombre_cliente") or "Cliente Comercial"
+            tipo_doc = data.get("tipo_documento") or "CC"
+            if doc_cliente:
+                cliente_existente = Clientes.get_by_documento(str(doc_cliente).strip())
+                if cliente_existente:
+                    id_cliente = cliente_existente.id
+                else:
+                    # Crear nuevo cliente automáticamente
+                    nuevo_cliente = Clientes()
+                    nuevo_cliente.documento = str(doc_cliente).strip()
+                    nuevo_cliente.tipo_documento = tipo_doc
+                    nuevo_cliente.nombre = str(nom_cliente).strip()
+                    nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
+                    nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
+                    nuevo_cliente.email = data.get("email_cliente", f"cliente_{doc_cliente}@correo.com")
+                    nuevo_cliente.estado = "Activo"
+                    nuevo_cliente.save()
+                    id_cliente = nuevo_cliente.id
+            else:
+                primer_cliente = session.query(Clientes).first()
+                id_cliente = primer_cliente.id if primer_cliente else 1
+
+        # Resolver id_metodo_pago
+        id_metodo = data.get("id_metodo_pago")
+        if not id_metodo and data.get("metodo_pago"):
+            nom_mp = str(data.get("metodo_pago")).strip().lower()
+            if "tarjet" in nom_mp:
+                id_metodo = 3
+            elif "transf" in nom_mp or "nequi" in nom_mp or "davi" in nom_mp:
+                id_metodo = 2
+            else:
+                id_metodo = 1
+
         factura = Facturas()
         factura.numero = str(numero).strip()
         factura.fecha = fecha_factura
@@ -131,9 +168,9 @@ class FacturasController:
         factura.descuento = descuento
         factura.total = data.get("total", total)
         factura.estado = data.get("estado", "Emitida")
-        factura.id_cliente = int(data["id_cliente"])
+        factura.id_cliente = int(id_cliente)
         factura.id_usuario = int(data.get("id_usuario", 1))
-        factura.id_metodo_pago = int(data.get("id_metodo_pago", 1))
+        factura.id_metodo_pago = int(id_metodo or 1)
         
         factura.create()
 

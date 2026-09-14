@@ -65,6 +65,20 @@ def update_producto(id):
     return jsonify({"mensaje": "Producto no encontrado"}), 404
 
 # ===========================
+# Cambiar estado del producto (Activar / Desactivar)
+# ===========================
+@productos_bp.route("/<int:id>/estado", methods=["PATCH"])
+@jwt_required(optional=True)
+@roles_required("Administrador")
+def toggle_estado_producto(id):
+    data = request.get_json() or {}
+    nuevo_estado = data.get("estado", "Inactivo")
+    producto = ProductosController.desactivar(id, estado=nuevo_estado)
+    if producto and hasattr(producto, "to_dict"):
+        return jsonify({"mensaje": f"Producto actualizado a estado {nuevo_estado}", "producto": producto.to_dict()}), 200
+    return jsonify({"mensaje": "Producto no encontrado"}), 404
+
+# ===========================
 # Eliminar producto
 # ===========================
 @productos_bp.route("/<int:id>", methods=["DELETE"])
@@ -73,5 +87,5 @@ def update_producto(id):
 def delete_producto(id):
     eliminado = ProductosController.delete(id)
     if eliminado:
-        return jsonify({"mensaje": "Producto eliminado correctamente"}), 200
+        return jsonify({"mensaje": "Producto desactivado correctamente"}), 200
     return jsonify({"mensaje": "Producto no encontrado"}), 404
