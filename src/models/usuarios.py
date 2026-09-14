@@ -18,6 +18,10 @@ class Usuarios(Base):
     banco = Column(String(100), nullable=True)
     tipo_cuenta = Column(String(50), nullable=True)
     numero_cuenta = Column(String(50), nullable=True)
+    fecha_nacimiento = Column(String(20), nullable=True)
+    lugar_residencia = Column(String(200), nullable=True)
+    estado_civil = Column(String(50), nullable=True)
+    numero_hijos = Column(Integer, default=0, nullable=True)
 
     def save(self):
         session.add(self)
@@ -68,5 +72,9 @@ class Usuarios(Base):
             "estado": self.estado or "Activo",
             "banco": self.banco or "",
             "tipo_cuenta": self.tipo_cuenta or "",
-            "numero_cuenta": self.numero_cuenta or ""
+            "numero_cuenta": self.numero_cuenta or "",
+            "fecha_nacimiento": self.fecha_nacimiento or "",
+            "lugar_residencia": self.lugar_residencia or "",
+            "estado_civil": self.estado_civil or "",
+            "numero_hijos": self.numero_hijos if self.numero_hijos is not None else 0
         }

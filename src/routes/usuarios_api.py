@@ -9,14 +9,16 @@ usuarios_bp = Blueprint("usuarios", __name__)
 
 
 # ===========================
-# Obtener todos los usuarios (paginado)
+# Obtener todos los usuarios (paginado con búsqueda y filtros)
 # ===========================
 @usuarios_bp.route("/", methods=["GET"])
 @jwt_required(optional=True)
 def get_usuarios():
     try:
         page, per_page = get_pagination_params()
-        resultado = UsuariosController.get_paginated(page, per_page)
+        q = request.args.get("q", "").strip()
+        filtro = request.args.get("filtro", "").strip()
+        resultado = UsuariosController.get_paginated(page, per_page, q=q, filtro=filtro)
         return jsonify(resultado), 200
     except Exception as e:
         session.rollback()
@@ -34,6 +36,21 @@ def get_usuario(id):
         if usuario:
             return jsonify(usuario.to_dict()), 200
         return jsonify({"mensaje": "Usuario no encontrado"}), 404
+    except Exception as e:
+        session.rollback()
+        return jsonify({"mensaje": str(e)}), 500
+
+
+# ===========================
+# Obtener un usuario por Username
+# ===========================
+@usuarios_bp.route("/username/<username>", methods=["GET"])
+def get_usuario_por_username(username):
+    try:
+        usuario = UsuariosController.get_by_username(username)
+        if usuario:
+            return jsonify(usuario.to_dict()), 200
+        return jsonify({"mensaje": f"No existe ningún usuario registrado con el identificador @{username.lstrip('@')}"}), 404
     except Exception as e:
         session.rollback()
         return jsonify({"mensaje": str(e)}), 500

@@ -17,7 +17,11 @@ class DatabaseMigrations:
                     "ALTER TABLE usuarios ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
                     "ALTER TABLE usuarios ADD COLUMN banco VARCHAR(100)",
                     "ALTER TABLE usuarios ADD COLUMN tipo_cuenta VARCHAR(50)",
-                    "ALTER TABLE usuarios ADD COLUMN numero_cuenta VARCHAR(50)"
+                    "ALTER TABLE usuarios ADD COLUMN numero_cuenta VARCHAR(50)",
+                    "ALTER TABLE usuarios ADD COLUMN fecha_nacimiento VARCHAR(20)",
+                    "ALTER TABLE usuarios ADD COLUMN lugar_residencia VARCHAR(200)",
+                    "ALTER TABLE usuarios ADD COLUMN estado_civil VARCHAR(50)",
+                    "ALTER TABLE usuarios ADD COLUMN numero_hijos INT DEFAULT 0"
                 ]
                 for query in columnas_usuarios:
                     try:
