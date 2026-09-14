@@ -21,7 +21,8 @@ class DatabaseMigrations:
                     "ALTER TABLE usuarios ADD COLUMN fecha_nacimiento VARCHAR(20)",
                     "ALTER TABLE usuarios ADD COLUMN lugar_residencia VARCHAR(200)",
                     "ALTER TABLE usuarios ADD COLUMN estado_civil VARCHAR(50)",
-                    "ALTER TABLE usuarios ADD COLUMN sesion_version INT DEFAULT 1"
+                    "ALTER TABLE usuarios ADD COLUMN sesion_version INT DEFAULT 1",
+                    "ALTER TABLE usuarios ADD COLUMN foto TEXT"
                 ]
                 for query in columnas_usuarios:
                     try:

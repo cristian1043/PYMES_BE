@@ -218,6 +218,8 @@ class UsuariosController:
                 usuario.numero_hijos = int(data["numero_hijos"]) if data["numero_hijos"] not in [None, ""] else 0
             except (ValueError, TypeError):
                 usuario.numero_hijos = 0
+        if "foto" in data:
+            usuario.foto = data["foto"]
 
         usuario.update()
         return usuario
