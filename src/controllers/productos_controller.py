@@ -57,6 +57,8 @@ class ProductosController:
         producto.unidad_medida = data.get("unidad_medida", "UND")
         producto.estado = data.get("estado", "Activo")
         producto.imagen = data.get("imagen", None)
+        emp_id = data.get("id_empresa")
+        producto.id_empresa = int(emp_id) if emp_id else None
         
         producto.create()
         return producto

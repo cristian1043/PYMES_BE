@@ -50,7 +50,8 @@ class DatabaseMigrations:
                     "ALTER TABLE productos ADD COLUMN id_proveedor INT",
                     "ALTER TABLE productos ADD COLUMN costo FLOAT DEFAULT 0.0",
                     "ALTER TABLE productos ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
-                    "ALTER TABLE productos ADD COLUMN imagen TEXT"
+                    "ALTER TABLE productos ADD COLUMN imagen TEXT",
+                    "ALTER TABLE productos ADD COLUMN id_empresa INT"
                 ]
                 for query in columnas_productos:
                     try:

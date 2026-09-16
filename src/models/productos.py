@@ -18,6 +18,7 @@ class Productos(Base):
     costo = Column(Float, nullable=True, default=0.0)
     estado = Column(String(20), default="Activo")
     imagen = Column(String, nullable=True)
+    id_empresa = Column(Integer, nullable=True)
 
     def create(self):
         session.add(self)
@@ -56,5 +57,6 @@ class Productos(Base):
             "id_categoria": self.id_categoria,
             "id_proveedor": self.id_proveedor,
             "estado": self.estado or "Activo",
-            "imagen": self.imagen
+            "imagen": self.imagen,
+            "id_empresa": self.id_empresa
         }
