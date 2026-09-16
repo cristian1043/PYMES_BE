@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, func
 from src.models import Base, session
+from src.models.roles import Roles
 
 class Usuarios(Base):
     __tablename__ = "usuarios"
