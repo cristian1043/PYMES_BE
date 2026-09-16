@@ -17,7 +17,54 @@ class UsuariosController:
         return Usuarios.get()
 
     @staticmethod
-    def get_paginated(page=1, per_page=10, q=None, filtro=None):
+    def get_paginated(page=1, per_page=10, q=None, filtro=None, empresa_id=None):
+        if empresa_id:
+            from src.models.usuario_empresas import UsuarioEmpresas
+            query = session.query(Usuarios, UsuarioEmpresas).join(
+                UsuarioEmpresas, Usuarios.id == UsuarioEmpresas.usuario_id
+            ).filter(UsuarioEmpresas.empresa_id == int(empresa_id))
+
+            if q:
+                q_clean = str(q).strip()
+                if filtro == "id" and q_clean.isdigit():
+                    query = query.filter(Usuarios.id == int(q_clean))
+                elif filtro == "username":
+                    clean_u = q_clean.lstrip("@").lower()
+                    query = query.filter(func.lower(Usuarios.username).ilike(f"%{clean_u}%"))
+                elif filtro == "documento":
+                    query = query.filter(Usuarios.documento.ilike(f"%{q_clean}%"))
+                elif filtro == "nombre":
+                    query = query.filter(
+                        or_(
+                            Usuarios.nombre.ilike(f"%{q_clean}%"),
+                            Usuarios.apellido.ilike(f"%{q_clean}%")
+                        )
+                    )
+                else:
+                    clean_u = q_clean.lstrip("@")
+                    conds = [
+                        Usuarios.username.ilike(f"%{clean_u}%"),
+                        Usuarios.documento.ilike(f"%{q_clean}%"),
+                        Usuarios.nombre.ilike(f"%{q_clean}%"),
+                        Usuarios.apellido.ilike(f"%{q_clean}%"),
+                        Usuarios.email.ilike(f"%{q_clean}%")
+                    ]
+                    if q_clean.isdigit():
+                        conds.append(Usuarios.id == int(q_clean))
+                    query = query.filter(or_(*conds))
+
+            def transform_empresa_usuario(row):
+                u, ue = row
+                d = u.to_dict()
+                d["id_rol"] = ue.rol_id
+                roles_map = {1: "Administrador", 2: "Vendedor", 3: "Almacenista"}
+                d["rol_nombre"] = roles_map.get(ue.rol_id, "Vendedor")
+                d["estado"] = ue.estado
+                d["empresa_id"] = ue.empresa_id
+                return d
+
+            return paginate_query(query, page, per_page, transform_fn=transform_empresa_usuario)
+
         query = Usuarios.get_query()
         if q:
             q_clean = str(q).strip()

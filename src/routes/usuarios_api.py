@@ -18,7 +18,8 @@ def get_usuarios():
         page, per_page = get_pagination_params()
         q = request.args.get("q", "").strip()
         filtro = request.args.get("filtro", "").strip()
-        resultado = UsuariosController.get_paginated(page, per_page, q=q, filtro=filtro)
+        empresa_id = request.args.get("empresa_id")
+        resultado = UsuariosController.get_paginated(page, per_page, q=q, filtro=filtro, empresa_id=empresa_id)
         return jsonify(resultado), 200
     except Exception as e:
         session.rollback()
