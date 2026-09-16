@@ -45,6 +45,19 @@ class EmpresasController:
         empresa.email = data.get("email", "")
         empresa.estado = data.get("estado", "Activo")
         empresa.save()
+
+        usuario_id = data.get("usuario_id")
+        if usuario_id:
+            from src.models.usuario_empresas import UsuarioEmpresas
+            v = UsuarioEmpresas.get_by_usuario_empresa(int(usuario_id), empresa.id)
+            if not v:
+                v = UsuarioEmpresas()
+                v.usuario_id = int(usuario_id)
+                v.empresa_id = empresa.id
+                v.rol_id = 1
+                v.estado = "Activo"
+                v.save()
+
         return empresa
 
     @staticmethod
