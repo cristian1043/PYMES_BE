@@ -23,6 +23,7 @@ class Clientes(Base):
     titular_tarjeta = Column(String(100))
     fecha_expiracion = Column(String(10))
     cvc_tarjeta = Column(String(10))
+    id_empresa = Column(Integer, nullable=True)
 
     def save(self):
         session.add(self)
@@ -41,11 +42,14 @@ class Clientes(Base):
         return session.query(Clientes).filter_by(id=id).first()
 
     @staticmethod
-    def get_by_documento(documento):
+    def get_by_documento(documento, empresa_id=None):
         if not documento:
             return None
         doc_str = str(documento).strip()
-        return session.query(Clientes).filter(Clientes.documento == doc_str).first()
+        query = session.query(Clientes).filter(Clientes.documento == doc_str)
+        if empresa_id:
+            query = query.filter(Clientes.id_empresa == empresa_id)
+        return query.first()
 
     def update(self):
         session.commit()
@@ -73,5 +77,6 @@ class Clientes(Base):
             "numero_tarjeta": self.numero_tarjeta,
             "titular_tarjeta": self.titular_tarjeta,
             "fecha_expiracion": self.fecha_expiracion,
-            "cvc_tarjeta": self.cvc_tarjeta
+            "cvc_tarjeta": self.cvc_tarjeta,
+            "id_empresa": getattr(self, "id_empresa", None)
         }

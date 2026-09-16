@@ -13,7 +13,8 @@ clientes_bp = Blueprint("clientes", __name__)
 @jwt_required(optional=True)
 def get_clientes():
     page, per_page = get_pagination_params()
-    resultado = ClientesController.get_paginated(page, per_page)
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    resultado = ClientesController.get_paginated(page, per_page, empresa_id=empresa_id)
     return jsonify(resultado), 200
 
 # ===========================
@@ -23,9 +24,10 @@ def get_clientes():
 @jwt_required(optional=True)
 def buscar_cliente():
     documento = request.args.get("documento")
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     if not documento:
         return jsonify({"mensaje": "Parámetro 'documento' es requerido"}), 400
-    cliente = ClientesController.buscar_por_documento(documento)
+    cliente = ClientesController.buscar_por_documento(documento, empresa_id=empresa_id)
     if cliente and hasattr(cliente, "to_dict"):
         return jsonify(cliente.to_dict()), 200
     return jsonify({"mensaje": "Cliente no encontrado"}), 404

@@ -21,6 +21,7 @@ class Facturas(Base):
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     id_metodo_pago = Column(Integer, ForeignKey('metodos_pago.id'), nullable=False)
     estado = Column(String(20), default='Emitida', nullable=True)
+    id_empresa = Column(Integer, nullable=True)
 
     def create(self):
         session.add(self)
@@ -85,6 +86,7 @@ class Facturas(Base):
             "cliente_tipo_documento": cliente_tipo_doc,
             "id_usuario": self.id_usuario,
             "id_metodo_pago": self.id_metodo_pago,
-            "metodo_pago": metodo_pago_nombre
+            "metodo_pago": metodo_pago_nombre,
+            "id_empresa": getattr(self, "id_empresa", None)
         }
 

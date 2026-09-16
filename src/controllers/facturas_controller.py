@@ -11,12 +11,18 @@ from src.utils.pagination import paginate_query
 class FacturasController:
 
     @staticmethod
-    def get():
-        return Facturas.get()
+    def get(empresa_id=None):
+        query = Facturas.get_query()
+        if empresa_id:
+            query = query.filter(Facturas.id_empresa == int(empresa_id))
+        return query.all()
 
     @staticmethod
-    def get_paginated(page=1, per_page=10):
-        return paginate_query(Facturas.get_query(), page, per_page)
+    def get_paginated(page=1, per_page=10, empresa_id=None):
+        query = Facturas.get_query()
+        if empresa_id:
+            query = query.filter(Facturas.id_empresa == int(empresa_id))
+        return paginate_query(query, page, per_page)
 
     @staticmethod
     def get_by_id(id):
@@ -143,6 +149,8 @@ class FacturasController:
                     nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
                     nuevo_cliente.email = data.get("email_cliente", f"cliente_{doc_cliente}@correo.com")
                     nuevo_cliente.estado = "Activo"
+                    emp_cli = data.get("id_empresa") or data.get("empresa_id")
+                    nuevo_cliente.id_empresa = int(emp_cli) if emp_cli else None
                     nuevo_cliente.save()
                     id_cliente = nuevo_cliente.id
             else:
@@ -171,6 +179,8 @@ class FacturasController:
         factura.id_cliente = int(id_cliente)
         factura.id_usuario = int(data.get("id_usuario", 1))
         factura.id_metodo_pago = int(id_metodo or 1)
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        factura.id_empresa = int(emp_id) if emp_id else None
         
         factura.create()
 

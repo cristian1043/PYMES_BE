@@ -14,7 +14,8 @@ proveedores_bp = Blueprint("proveedores", __name__)
 @jwt_required(optional=True)
 def get_proveedores():
     page, per_page = get_pagination_params()
-    resultado = ProveedoresController.get_paginated(page, per_page)
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    resultado = ProveedoresController.get_paginated(page, per_page, empresa_id=empresa_id)
     return jsonify(resultado), 200
 
 

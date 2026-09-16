@@ -39,11 +39,16 @@ class DatabaseMigrations:
                     pass
 
                 # Columnas adicionales para la tabla facturas
-                try:
-                    conn.execute(text("ALTER TABLE facturas ADD COLUMN estado VARCHAR(20) DEFAULT 'Emitida'"))
-                    conn.commit()
-                except Exception:
-                    pass
+                columnas_facturas = [
+                    "ALTER TABLE facturas ADD COLUMN estado VARCHAR(20) DEFAULT 'Emitida'",
+                    "ALTER TABLE facturas ADD COLUMN id_empresa INT"
+                ]
+                for query in columnas_facturas:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
 
                 # Columnas adicionales para la tabla productos
                 columnas_productos = [
@@ -72,7 +77,8 @@ class DatabaseMigrations:
                     "ALTER TABLE clientes ADD COLUMN numero_tarjeta VARCHAR(20)",
                     "ALTER TABLE clientes ADD COLUMN titular_tarjeta VARCHAR(100)",
                     "ALTER TABLE clientes ADD COLUMN fecha_expiracion VARCHAR(10)",
-                    "ALTER TABLE clientes ADD COLUMN cvc_tarjeta VARCHAR(10)"
+                    "ALTER TABLE clientes ADD COLUMN cvc_tarjeta VARCHAR(10)",
+                    "ALTER TABLE clientes ADD COLUMN id_empresa INT"
                 ]
                 for query in columnas_clientes:
                     try:
@@ -84,7 +90,8 @@ class DatabaseMigrations:
                 # Columnas adicionales para la tabla proveedores
                 columnas_proveedores = [
                     "ALTER TABLE proveedores ADD COLUMN detalle_servicios VARCHAR(500)",
-                    "ALTER TABLE proveedores ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'"
+                    "ALTER TABLE proveedores ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
+                    "ALTER TABLE proveedores ADD COLUMN id_empresa INT"
                 ]
                 for query in columnas_proveedores:
                     try:
@@ -96,7 +103,8 @@ class DatabaseMigrations:
                 # Columnas adicionales para la tabla compras
                 columnas_compras = [
                     "ALTER TABLE compras ADD COLUMN numero VARCHAR(50)",
-                    "ALTER TABLE compras ADD COLUMN estado VARCHAR(20) DEFAULT 'Completada'"
+                    "ALTER TABLE compras ADD COLUMN estado VARCHAR(20) DEFAULT 'Completada'",
+                    "ALTER TABLE compras ADD COLUMN id_empresa INT"
                 ]
                 for query in columnas_compras:
                     try:

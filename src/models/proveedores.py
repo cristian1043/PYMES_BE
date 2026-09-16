@@ -12,6 +12,7 @@ class Proveedores(Base):
     email = Column(String(255), unique=True, nullable=False)
     detalle_servicios = Column(String(500))
     estado = Column(String(20), default='Activo', nullable=True)
+    id_empresa = Column(Integer, nullable=True)
 
     def save(self):
         session.add(self)
@@ -45,5 +46,6 @@ class Proveedores(Base):
             "direccion": self.direccion,
             "email": self.email,
             "detalle_servicios": self.detalle_servicios or "",
-            "estado": getattr(self, "estado", "Activo") or "Activo"
+            "estado": getattr(self, "estado", "Activo") or "Activo",
+            "id_empresa": getattr(self, "id_empresa", None)
         }

@@ -6,12 +6,18 @@ import uuid
 class ProductosController:
 
     @staticmethod
-    def get():
-        return Productos.get()
+    def get(empresa_id=None):
+        query = Productos.get_query()
+        if empresa_id:
+            query = query.filter(Productos.id_empresa == int(empresa_id))
+        return query.all()
 
     @staticmethod
-    def get_paginated(page=1, per_page=10):
-        return paginate_query(Productos.get_query(), page, per_page)
+    def get_paginated(page=1, per_page=10, empresa_id=None):
+        query = Productos.get_query()
+        if empresa_id:
+            query = query.filter(Productos.id_empresa == int(empresa_id))
+        return paginate_query(query, page, per_page)
 
     @staticmethod
     def get_by_id(id):

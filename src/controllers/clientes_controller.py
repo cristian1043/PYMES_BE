@@ -4,12 +4,18 @@ from src.utils.pagination import paginate_query
 class ClientesController:
 
     @staticmethod
-    def get():
-        return Clientes.get()
+    def get(empresa_id=None):
+        query = Clientes.get_query()
+        if empresa_id:
+            query = query.filter(Clientes.id_empresa == int(empresa_id))
+        return query.all()
 
     @staticmethod
-    def get_paginated(page=1, per_page=10):
-        return paginate_query(Clientes.get_query(), page, per_page)
+    def get_paginated(page=1, per_page=10, empresa_id=None):
+        query = Clientes.get_query()
+        if empresa_id:
+            query = query.filter(Clientes.id_empresa == int(empresa_id))
+        return paginate_query(query, page, per_page)
 
     @staticmethod
     def get_by_id(id):
@@ -27,6 +33,8 @@ class ClientesController:
         cliente.email = data.get("email", "")
         cliente.tipo_documento = data.get("tipo_documento", "CC")
         cliente.estado = data.get("estado", "Activo")
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        cliente.id_empresa = int(emp_id) if emp_id else None
         
         cliente.tiene_tarjeta = data.get("tiene_tarjeta", "No")
         cliente.tipo_tarjeta = data.get("tipo_tarjeta")
@@ -92,8 +100,8 @@ class ClientesController:
         return cliente
 
     @staticmethod
-    def buscar_por_documento(documento):
-        return Clientes.get_by_documento(documento)
+    def buscar_por_documento(documento, empresa_id=None):
+        return Clientes.get_by_documento(documento, empresa_id=empresa_id)
 
     @staticmethod
     def delete(id):

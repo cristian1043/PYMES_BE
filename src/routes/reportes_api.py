@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, request, jsonify
 from src.controllers.reportes_controller import ReportesController
 
 reportes_bp = Blueprint("reportes", __name__)
@@ -8,7 +8,8 @@ reportes_bp = Blueprint("reportes", __name__)
 # ===========================
 @reportes_bp.route("/ventas", methods=["GET"])
 def get_reporte_ventas():
-    resumen = ReportesController.get_reporte_ventas()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    resumen = ReportesController.get_reporte_ventas(empresa_id=empresa_id)
     return jsonify(resumen), 200
 
 # ===========================
@@ -16,7 +17,8 @@ def get_reporte_ventas():
 # ===========================
 @reportes_bp.route("/clientes", methods=["GET"])
 def get_reporte_clientes():
-    ranking = ReportesController.get_reporte_clientes()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    ranking = ReportesController.get_reporte_clientes(empresa_id=empresa_id)
     return jsonify(ranking), 200
 
 # ===========================
@@ -24,7 +26,8 @@ def get_reporte_clientes():
 # ===========================
 @reportes_bp.route("/inventario", methods=["GET"])
 def get_reporte_inventario():
-    inventario = ReportesController.get_reporte_inventario()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    inventario = ReportesController.get_reporte_inventario(empresa_id=empresa_id)
     return jsonify(inventario), 200
 
 # ===========================
@@ -32,7 +35,8 @@ def get_reporte_inventario():
 # ===========================
 @reportes_bp.route("/top-productos", methods=["GET"])
 def get_reporte_top_productos():
-    ranking = ReportesController.get_reporte_top_productos()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    ranking = ReportesController.get_reporte_top_productos(empresa_id=empresa_id)
     return jsonify(ranking), 200
 
 # ===========================
@@ -40,8 +44,9 @@ def get_reporte_top_productos():
 # ===========================
 @reportes_bp.route("/dashboard", methods=["GET"])
 def get_reporte_dashboard():
-    ventas = ReportesController.get_reporte_ventas()
-    inventario = ReportesController.get_reporte_inventario()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    ventas = ReportesController.get_reporte_ventas(empresa_id=empresa_id)
+    inventario = ReportesController.get_reporte_inventario(empresa_id=empresa_id)
     return jsonify({
         'total_ventas': ventas.get('total_ventas', 0.0),
         'cantidad_facturas': ventas.get('cantidad_facturas', 0),

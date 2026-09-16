@@ -19,6 +19,7 @@ class Compras(Base):
     id_proveedor = Column(Integer, ForeignKey('proveedores.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     estado = Column(String(20), default='Completada')
+    id_empresa = Column(Integer, nullable=True)
 
     def create(self):
         session.add(self)
@@ -56,5 +57,6 @@ class Compras(Base):
             "estado": self.estado or "Completada",
             "id_proveedor": self.id_proveedor,
             "proveedor_nombre": prov.nombre if prov else f"Proveedor #{self.id_proveedor}",
-            "id_usuario": self.id_usuario
+            "id_usuario": self.id_usuario,
+            "id_empresa": getattr(self, "id_empresa", None)
         }

@@ -13,12 +13,13 @@ productos_bp = Blueprint("productos", __name__)
 @jwt_required(optional=True)
 def get_productos():
     page, per_page = get_pagination_params()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     # Si se especifican parámetros de paginación o por defecto
     if request.args.get("page") or request.args.get("per_page") or True:
-        resultado = ProductosController.get_paginated(page, per_page)
+        resultado = ProductosController.get_paginated(page, per_page, empresa_id=empresa_id)
         return jsonify(resultado), 200
     
-    productos = ProductosController.get()
+    productos = ProductosController.get(empresa_id=empresa_id)
     return jsonify([c.to_dict() for c in productos]), 200
 
 # ===========================

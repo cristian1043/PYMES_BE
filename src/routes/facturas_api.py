@@ -13,7 +13,8 @@ facturas_bp = Blueprint("facturas", __name__)
 @jwt_required(optional=True)
 def get_facturas():
     page, per_page = get_pagination_params()
-    resultado = FacturasController.get_paginated(page, per_page)
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    resultado = FacturasController.get_paginated(page, per_page, empresa_id=empresa_id)
     return jsonify(resultado), 200
 
 # ===========================

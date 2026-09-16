@@ -10,12 +10,18 @@ from src.utils.pagination import paginate_query
 class ComprasController:
     
     @staticmethod
-    def get():
-        return Compras.get()
+    def get(empresa_id=None):
+        query = Compras.get_query()
+        if empresa_id:
+            query = query.filter(Compras.id_empresa == int(empresa_id))
+        return query.all()
 
     @staticmethod
-    def get_paginated(page=1, per_page=10):
-        return paginate_query(Compras.get_query(), page, per_page)
+    def get_paginated(page=1, per_page=10, empresa_id=None):
+        query = Compras.get_query()
+        if empresa_id:
+            query = query.filter(Compras.id_empresa == int(empresa_id))
+        return paginate_query(query, page, per_page)
 
     @staticmethod
     def get_by_id(id):
@@ -112,6 +118,8 @@ class ComprasController:
         compra.estado = data.get("estado", "Completada")
         compra.id_proveedor = int(data.get("id_proveedor", 1))
         compra.id_usuario = int(data.get("id_usuario", 1))
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        compra.id_empresa = int(emp_id) if emp_id else None
         
         compra.create()
 

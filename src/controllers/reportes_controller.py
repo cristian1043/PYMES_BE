@@ -10,10 +10,13 @@ class ReportesController:
     """
 
     @staticmethod
-    def get_reporte_ventas():
+    def get_reporte_ventas(empresa_id=None):
         """Calcula los agregados financieros de las facturas válidas registradas (excluye canceladas)."""
         try:
-            facturas = session.query(Facturas).all()
+            query = session.query(Facturas)
+            if empresa_id:
+                query = query.filter(Facturas.id_empresa == int(empresa_id))
+            facturas = query.all()
             if not facturas:
                 return {
                     'total_ventas': 0.0,
@@ -57,11 +60,17 @@ class ReportesController:
             }
 
     @staticmethod
-    def get_reporte_clientes():
+    def get_reporte_clientes(empresa_id=None):
         """Procesa el ranking de compras agrupado por cliente (excluye facturas canceladas)."""
         try:
-            clientes = session.query(Clientes).all()
-            facturas = session.query(Facturas).all()
+            cli_query = session.query(Clientes)
+            fac_query = session.query(Facturas)
+            if empresa_id:
+                cli_query = cli_query.filter(Clientes.id_empresa == int(empresa_id))
+                fac_query = fac_query.filter(Facturas.id_empresa == int(empresa_id))
+
+            clientes = cli_query.all()
+            facturas = fac_query.all()
 
             resultado = []
             for cli in clientes:
@@ -89,10 +98,13 @@ class ReportesController:
             return []
 
     @staticmethod
-    def get_reporte_inventario():
+    def get_reporte_inventario(empresa_id=None):
         """Calcula la valoración total del stock e identifica productos críticos."""
         try:
-            productos = session.query(Productos).all()
+            query = session.query(Productos)
+            if empresa_id:
+                query = query.filter(Productos.id_empresa == int(empresa_id))
+            productos = query.all()
             if not productos:
                 return {
                     'valor_total_inventario': 0.0,
@@ -122,12 +134,18 @@ class ReportesController:
             }
 
     @staticmethod
-    def get_reporte_top_productos():
+    def get_reporte_top_productos(empresa_id=None):
         """Calcula el ranking de productos más vendidos según el historial de facturación."""
         try:
             from src.models.detalle_facturas import DetalleFacturas
-            detalles = session.query(DetalleFacturas).all()
-            productos = session.query(Productos).all()
+            prod_query = session.query(Productos)
+            if empresa_id:
+                prod_query = prod_query.filter(Productos.id_empresa == int(empresa_id))
+            productos = prod_query.all()
+            prod_ids = {p.id for p in productos}
+
+            detalles_all = session.query(DetalleFacturas).all()
+            detalles = [d for d in detalles_all if d.id_producto in prod_ids]
 
             ventas_prod = {}
             for d in detalles:

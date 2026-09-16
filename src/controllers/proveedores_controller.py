@@ -4,12 +4,18 @@ from src.utils.pagination import paginate_query
 class ProveedoresController:
 
     @staticmethod
-    def get():
-        return Proveedores.get()
+    def get(empresa_id=None):
+        query = Proveedores.get_query()
+        if empresa_id:
+            query = query.filter(Proveedores.id_empresa == int(empresa_id))
+        return query.all()
 
     @staticmethod
-    def get_paginated(page=1, per_page=10):
-        return paginate_query(Proveedores.get_query(), page, per_page)
+    def get_paginated(page=1, per_page=10, empresa_id=None):
+        query = Proveedores.get_query()
+        if empresa_id:
+            query = query.filter(Proveedores.id_empresa == int(empresa_id))
+        return paginate_query(query, page, per_page)
 
     @staticmethod
     def get_by_id(id):
@@ -27,6 +33,8 @@ class ProveedoresController:
         proveedor.email = data.get("email", "")
         proveedor.detalle_servicios = data.get("detalle_servicios", "")
         proveedor.estado = data.get("estado", "Activo")
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        proveedor.id_empresa = int(emp_id) if emp_id else None
         proveedor.save()
         return proveedor
 
