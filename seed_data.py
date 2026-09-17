@@ -179,8 +179,9 @@ def limpiar_y_sembrar_datos():
         ("Destruidora de Papel Corte Cruzado", "Capacidad 10 hojas continuas", 420000.0, 10, cat_objs[1].id, "PROD-014", "UND"),
         ("Proyector Epson Full HD", "3400 lúmenes con entrada HDMI", 210000.0, 5, cat_objs[0].id, "PROD-015", "UND")
     ]
-    for nom, desc, prec, st, c_id, cod, un in productos_def:
+    for idx, (nom, desc, prec, st, c_id, cod, un) in enumerate(productos_def):
         p = session.query(Productos).filter_by(nombre=nom).first()
+        emp_asignada = emp_objs[idx % len(emp_objs)].id
         if not p:
             p = Productos()
             p.nombre = nom
@@ -190,9 +191,14 @@ def limpiar_y_sembrar_datos():
             p.id_categoria = c_id
             p.codigo = cod
             p.unidad_medida = un
+            p.id_empresa = emp_asignada
             session.add(p)
+        else:
+            if not p.id_empresa:
+                p.id_empresa = emp_asignada
+                session.add(p)
     session.commit()
-    print("[OK] Productos cargados (15 productos).")
+    print("[OK] Productos cargados (15 productos vinculados a empresas).")
 
     # 8. Clientes
     clientes_def = [
@@ -209,8 +215,9 @@ def limpiar_y_sembrar_datos():
         ("CC", "1089012345", "Patricia", "Gutiérrez Niño", "patricia.gutierrez@outlook.com", "3178901234", "Carrera 50 # 100-15"),
         ("CC", "1090123456", "Gustavo Adolfo", "Sánchez Vega", "gustavo.sanchez@gmail.com", "3145678901", "Calle 170 # 15-40")
     ]
-    for doc_t, doc, nom, ape, ema, tel, dir_ in clientes_def:
+    for idx, (doc_t, doc, nom, ape, ema, tel, dir_) in enumerate(clientes_def):
         c = session.query(Clientes).filter_by(documento=doc).first()
+        emp_asignada = emp_objs[idx % len(emp_objs)].id
         if not c:
             c = Clientes()
             c.tipo_documento = doc_t
@@ -221,9 +228,14 @@ def limpiar_y_sembrar_datos():
             c.email = ema
             c.telefono = tel
             c.direccion = dir_
+            c.id_empresa = emp_asignada
             session.add(c)
+        else:
+            if not c.id_empresa:
+                c.id_empresa = emp_asignada
+                session.add(c)
     session.commit()
-    print("[OK] Clientes cargados (12 clientes).")
+    print("[OK] Clientes cargados (12 clientes vinculados a empresas).")
 
     # 9. Proveedores
     proveedores_def = [
@@ -233,8 +245,9 @@ def limpiar_y_sembrar_datos():
         ("900555666-7", "Suministros de Limpieza Industrial", "Luz Marina Botero", "6018889900", "info@limpiezaindustrial.co", "Calle 63 # 45-30"),
         ("901666777-9", "Importaciones Globales de Electrónica", "Jorge Eliécer Gaitán", "6012223344", "importaciones@globalelec.com", "Autopista Norte # 145-80")
     ]
-    for nit, nom, cont, tel, ema, dir_ in proveedores_def:
+    for idx, (nit, nom, cont, tel, ema, dir_) in enumerate(proveedores_def):
         prov = session.query(Proveedores).filter_by(nit=nit).first()
+        emp_asignada = emp_objs[idx % len(emp_objs)].id
         if not prov:
             prov = Proveedores()
             prov.nit = nit
@@ -244,9 +257,14 @@ def limpiar_y_sembrar_datos():
             prov.telefono = tel
             prov.email = ema
             prov.direccion = dir_
+            prov.id_empresa = emp_asignada
             session.add(prov)
+        else:
+            if not getattr(prov, 'id_empresa', None):
+                prov.id_empresa = emp_asignada
+                session.add(prov)
     session.commit()
-    print("[OK] Proveedores cargados (5 proveedores).")
+    print("[OK] Proveedores cargados (5 proveedores vinculados a empresas).")
 
     # 10. Facturas de Prueba (12 facturas para establecer múltiples páginas de paginación)
     facturas_def = [
@@ -263,8 +281,9 @@ def limpiar_y_sembrar_datos():
         ("FAC-011", 175000.0, 33250.0, 208250.0, 11, 3, 1),
         ("FAC-012", 420000.0, 79800.0, 499800.0, 12, 1, 2)
     ]
-    for num, sub, iva, tot, id_c, id_m, id_u in facturas_def:
+    for idx, (num, sub, iva, tot, id_c, id_m, id_u) in enumerate(facturas_def):
         f = session.query(Facturas).filter_by(numero=num).first()
+        emp_asignada = emp_objs[idx % len(emp_objs)].id
         if not f:
             f = Facturas()
             f.numero = num
@@ -275,9 +294,14 @@ def limpiar_y_sembrar_datos():
             f.id_cliente = id_c
             f.id_metodo_pago = id_m
             f.id_usuario = id_u
+            f.id_empresa = emp_asignada
             session.add(f)
+        else:
+            if not f.id_empresa:
+                f.id_empresa = emp_asignada
+                session.add(f)
     session.commit()
-    print("[OK] Facturas cargadas.")
+    print("[OK] Facturas cargadas (vinculadas a empresas).")
 
     # 11. Detalle de Facturas (Productos Comprados por cada factura)
     from src.models.detalle_facturas import DetalleFacturas
@@ -328,7 +352,8 @@ def limpiar_y_sembrar_datos():
         ("FAC-COMP-011", 540000.0, 102600.0, 642600.0, 1, 2),
         ("FAC-COMP-012", 280000.0, 53200.0, 333200.0, 2, 3)
     ]
-    for num, sub, iva, tot, id_p, id_u in compras_def:
+    for i, (num, sub, iva, tot, id_p, id_u) in enumerate(compras_def):
+        emp_asignada = (i % 3) + 1
         c = session.query(Compras).filter_by(numero=num).first()
         if not c:
             c = Compras()
@@ -339,7 +364,10 @@ def limpiar_y_sembrar_datos():
             c.total = tot
             c.id_proveedor = id_p
             c.id_usuario = id_u
+            c.id_empresa = emp_asignada
             session.add(c)
+        else:
+            c.id_empresa = emp_asignada
     session.commit()
     print("[OK] Compras cargadas (12 compras de inventario).")
 

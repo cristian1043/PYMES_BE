@@ -8,6 +8,8 @@ class ClientesController:
         query = Clientes.get_query()
         if empresa_id:
             query = query.filter(Clientes.id_empresa == int(empresa_id))
+        else:
+            return []
         return query.all()
 
     @staticmethod
@@ -15,6 +17,8 @@ class ClientesController:
         query = Clientes.get_query()
         if empresa_id:
             query = query.filter(Clientes.id_empresa == int(empresa_id))
+        else:
+            return paginate_query(query.filter(Clientes.id_empresa == -1), page, per_page)
         return paginate_query(query, page, per_page)
 
     @staticmethod
@@ -40,11 +44,13 @@ class ClientesController:
         cliente.tipo_tarjeta = data.get("tipo_tarjeta")
         cliente.banco_tarjeta = data.get("banco_tarjeta")
         cliente.franquicia_tarjeta = data.get("franquicia_tarjeta")
-        cliente.ultimos_digitos_tarjeta = data.get("ultimos_digitos_tarjeta")
-        cliente.numero_tarjeta = data.get("numero_tarjeta")
+        # Por seguridad PCI-DSS, nunca guardar número completo ni CVC. Extraer únicamente últimos 4 dígitos.
+        raw_card = str(data.get("numero_tarjeta") or data.get("ultimos_digitos_tarjeta") or "").strip()
+        cliente.ultimos_digitos_tarjeta = raw_card[-4:] if len(raw_card) >= 4 else raw_card
+        cliente.numero_tarjeta = None
         cliente.titular_tarjeta = data.get("titular_tarjeta")
-        cliente.fecha_expiracion = data.get("fecha_expiracion")
-        cliente.cvc_tarjeta = data.get("cvc_tarjeta")
+        cliente.fecha_expiracion = None
+        cliente.cvc_tarjeta = None
 
         cliente.save()
         return cliente
@@ -76,16 +82,14 @@ class ClientesController:
             cliente.banco_tarjeta = data["banco_tarjeta"]
         if "franquicia_tarjeta" in data:
             cliente.franquicia_tarjeta = data["franquicia_tarjeta"]
-        if "ultimos_digitos_tarjeta" in data:
-            cliente.ultimos_digitos_tarjeta = data["ultimos_digitos_tarjeta"]
-        if "numero_tarjeta" in data:
-            cliente.numero_tarjeta = data["numero_tarjeta"]
+        if "ultimos_digitos_tarjeta" in data or "numero_tarjeta" in data:
+            raw_c = str(data.get("numero_tarjeta") or data.get("ultimos_digitos_tarjeta") or "").strip()
+            cliente.ultimos_digitos_tarjeta = raw_c[-4:] if len(raw_c) >= 4 else raw_c
+            cliente.numero_tarjeta = None
         if "titular_tarjeta" in data:
             cliente.titular_tarjeta = data["titular_tarjeta"]
-        if "fecha_expiracion" in data:
-            cliente.fecha_expiracion = data["fecha_expiracion"]
-        if "cvc_tarjeta" in data:
-            cliente.cvc_tarjeta = data["cvc_tarjeta"]
+        cliente.cvc_tarjeta = None
+        cliente.fecha_expiracion = None
 
         cliente.update()
         return cliente

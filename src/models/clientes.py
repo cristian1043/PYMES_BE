@@ -74,9 +74,6 @@ class Clientes(Base):
             "banco_tarjeta": self.banco_tarjeta,
             "franquicia_tarjeta": self.franquicia_tarjeta,
             "ultimos_digitos_tarjeta": self.ultimos_digitos_tarjeta,
-            "numero_tarjeta": self.numero_tarjeta,
             "titular_tarjeta": self.titular_tarjeta,
-            "fecha_expiracion": self.fecha_expiracion,
-            "cvc_tarjeta": self.cvc_tarjeta,
             "id_empresa": getattr(self, "id_empresa", None)
         }

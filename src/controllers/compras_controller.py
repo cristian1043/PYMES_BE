@@ -31,26 +31,13 @@ class ComprasController:
             
         c_dict = compra.to_dict()
 
-        # Enriquecer Proveedor
+        # Enriquecer Proveedor si existe
         prov = Proveedores.get_by_id(compra.id_proveedor)
-        if prov:
-            c_dict['proveedor'] = prov.to_dict()
-        else:
-            c_dict['proveedor'] = {
-                'nombre': 'Mayorista Tecnológico de Colombia',
-                'nit': '900111222-3',
-                'contacto': 'Carlos Ruiz',
-                'telefono': '6014445566',
-                'email': 'ventas@mayortecno.com',
-                'direccion': 'Calle 26 # 69-76'
-            }
+        c_dict['proveedor'] = prov.to_dict() if prov else None
 
-        # Enriquecer Usuario
+        # Enriquecer Usuario si existe
         usr = Usuarios.get_by_id(compra.id_usuario)
-        if usr:
-            c_dict['usuario'] = usr.to_dict()
-        else:
-            c_dict['usuario'] = {'nombre': 'Carlos', 'apellido': 'Rodríguez', 'email': 'carlos@pymes.com'}
+        c_dict['usuario'] = usr.to_dict() if usr else None
 
         # Enriquecer Ítems Comprados (DetalleCompras)
         detalles_db = session.query(DetalleCompras).filter_by(id_compra=id).all()
@@ -61,24 +48,14 @@ class ComprasController:
                 'id': det.id,
                 'id_producto': det.id_producto,
                 'codigo': prod.codigo if prod else f"PROD-{det.id_producto:03d}",
-                'nombre_producto': prod.nombre if prod else "Insumo / Producto de Compra",
+                'nombre_producto': prod.nombre if prod else "Insumo / Producto",
                 'unidad_medida': prod.unidad_medida if prod else "UND",
                 'cantidad': det.cantidad,
                 'costo_unitario': det.costo_unitario,
                 'subtotal': det.subtotal
             })
 
-        if not items_list:
-            items_list.append({
-                'id': 1,
-                'id_producto': 1,
-                'codigo': 'PROD-001',
-                'nombre_producto': 'Abastecimiento de Inventario / Suministros Comercializadora',
-                'unidad_medida': 'UND',
-                'cantidad': 1,
-                'costo_unitario': compra.subtotal,
-                'subtotal': compra.subtotal
-            })
+        c_dict['detalles'] = items_list
 
         # Convertir objetos datetime a string para compatibilidad JSON
         if isinstance(c_dict.get('fecha'), datetime):
@@ -109,6 +86,19 @@ class ComprasController:
         if not num or num == "COMP-AUTO":
             num = ComprasController.obtener_siguiente_numero()
 
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        if not emp_id:
+            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para registrar la compra.")
+        id_empresa_val = int(emp_id)
+
+        id_prov = data.get("id_proveedor")
+        if not id_prov:
+            raise ValueError("Debes especificar un proveedor válido para registrar la compra.")
+
+        detalles = data.get("detalles") or data.get("items") or []
+        if not detalles and subtotal <= 0:
+            raise ValueError("La orden de compra debe contener al menos un producto o ítem en el detalle.")
+
         compra = Compras()
         compra.numero = num
         compra.subtotal = subtotal
@@ -116,10 +106,9 @@ class ComprasController:
         compra.descuento = descuento
         compra.total = data.get("total", total)
         compra.estado = data.get("estado", "Completada")
-        compra.id_proveedor = int(data.get("id_proveedor", 1))
-        compra.id_usuario = int(data.get("id_usuario", 1))
-        emp_id = data.get("id_empresa") or data.get("empresa_id")
-        compra.id_empresa = int(emp_id) if emp_id else None
+        compra.id_proveedor = int(id_prov)
+        compra.id_usuario = int(data.get("id_usuario") or 1)
+        compra.id_empresa = id_empresa_val
         
         compra.create()
 

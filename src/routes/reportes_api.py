@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from src.controllers.reportes_controller import ReportesController
+from src.utils.security import roles_required, tenant_required
 
 reportes_bp = Blueprint("reportes", __name__)
 
@@ -7,6 +9,9 @@ reportes_bp = Blueprint("reportes", __name__)
 # Reporte Financiero de Ventas
 # ===========================
 @reportes_bp.route("/ventas", methods=["GET"])
+@jwt_required()
+@roles_required("Administrador", 1)
+@tenant_required(allow_global_admin=True)
 def get_reporte_ventas():
     empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     resumen = ReportesController.get_reporte_ventas(empresa_id=empresa_id)
@@ -16,6 +21,9 @@ def get_reporte_ventas():
 # Reporte Comercial de Clientes
 # ===========================
 @reportes_bp.route("/clientes", methods=["GET"])
+@jwt_required()
+@roles_required("Administrador", 1)
+@tenant_required(allow_global_admin=True)
 def get_reporte_clientes():
     empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     ranking = ReportesController.get_reporte_clientes(empresa_id=empresa_id)
@@ -25,6 +33,9 @@ def get_reporte_clientes():
 # Reporte Operativo de Inventario
 # ===========================
 @reportes_bp.route("/inventario", methods=["GET"])
+@jwt_required()
+@roles_required("Administrador", "Almacenista", 1, 3)
+@tenant_required(allow_global_admin=True)
 def get_reporte_inventario():
     empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     inventario = ReportesController.get_reporte_inventario(empresa_id=empresa_id)
@@ -34,6 +45,9 @@ def get_reporte_inventario():
 # Reporte Comercial de Top Productos
 # ===========================
 @reportes_bp.route("/top-productos", methods=["GET"])
+@jwt_required()
+@roles_required("Administrador", "Almacenista", 1, 3)
+@tenant_required(allow_global_admin=True)
 def get_reporte_top_productos():
     empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     ranking = ReportesController.get_reporte_top_productos(empresa_id=empresa_id)
@@ -43,6 +57,9 @@ def get_reporte_top_productos():
 # Métricas del Dashboard Ejecutivo
 # ===========================
 @reportes_bp.route("/dashboard", methods=["GET"])
+@jwt_required()
+@roles_required("Administrador", 1)
+@tenant_required(allow_global_admin=True)
 def get_reporte_dashboard():
     empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
     ventas = ReportesController.get_reporte_ventas(empresa_id=empresa_id)

@@ -30,11 +30,6 @@ class AuthController:
 
         # Verificar clave
         es_valida = verify_password(usuario.password_hash, password)
-        if not es_valida and password.lower() in ["admin", "123456"] and usuario.id_rol == 1:
-            es_valida = True
-            usuario.password_hash = hash_password(password)
-            usuario.update()
-
         if not es_valida:
             return {"exito": False, "mensaje": "Credenciales inválidas. Verifica tu usuario y contraseña."}, 401
 
@@ -177,10 +172,7 @@ class AuthController:
         return {
             "exito": True,
             "mensaje": f"Se ha generado la solicitud de recuperación. Se envió el enlace y código de verificación a {email_enmascarado}.",
-            "email_enmascarado": email_enmascarado,
-            "token": token,
-            "codigo": otp_codigo,
-            "link_directo": link_recuperacion
+            "email_enmascarado": email_enmascarado
         }, 200
 
     @staticmethod

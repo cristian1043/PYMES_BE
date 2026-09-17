@@ -8,6 +8,8 @@ class ProveedoresController:
         query = Proveedores.get_query()
         if empresa_id:
             query = query.filter(Proveedores.id_empresa == int(empresa_id))
+        else:
+            return []
         return query.all()
 
     @staticmethod
@@ -15,6 +17,8 @@ class ProveedoresController:
         query = Proveedores.get_query()
         if empresa_id:
             query = query.filter(Proveedores.id_empresa == int(empresa_id))
+        else:
+            return paginate_query(query.filter(Proveedores.id_empresa == -1), page, per_page)
         return paginate_query(query, page, per_page)
 
     @staticmethod

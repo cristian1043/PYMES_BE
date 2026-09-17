@@ -32,34 +32,17 @@ class FacturasController:
 
         f_dict = factura.to_dict()
 
-        # 1. Enriquecer datos completos del Cliente
+        # 1. Enriquecer datos del Cliente si existe
         cliente = Clientes.get_by_id(factura.id_cliente)
-        if cliente:
-            f_dict['cliente'] = cliente.to_dict()
-        else:
-            f_dict['cliente'] = {
-                'nombre': 'Cliente Comercial',
-                'apellido': '',
-                'tipo_documento': 'CC',
-                'documento': '1015432109',
-                'email': 'cliente@correo.com',
-                'telefono': '3001234567',
-                'direccion': 'Calle Principal # 45-12'
-            }
+        f_dict['cliente'] = cliente.to_dict() if cliente else None
 
-        # 2. Enriquecer datos del Usuario / Vendedor que emitió la factura
+        # 2. Enriquecer datos del Usuario que emitió la factura
         usuario = Usuarios.get_by_id(factura.id_usuario)
-        if usuario:
-            f_dict['usuario'] = usuario.to_dict()
-        else:
-            f_dict['usuario'] = {'nombre': 'Cristian', 'apellido': 'García', 'email': 'cristian@pymes.com'}
+        f_dict['usuario'] = usuario.to_dict() if usuario else None
 
         # 3. Enriquecer Método de Pago por Nombre
         metodo = MetodosPago.get_by_id(factura.id_metodo_pago)
-        if metodo:
-            f_dict['metodo_pago'] = metodo.to_dict()
-        else:
-            f_dict['metodo_pago'] = {'nombre': 'Transferencia Bancaria / Nequi'}
+        f_dict['metodo_pago'] = metodo.to_dict() if metodo else {'nombre': 'No especificado'}
 
         # 4. Enriquecer Lista de Productos e Ítems Comprados (DetalleFacturas)
         detalles_db = session.query(DetalleFacturas).filter_by(id_factura=id).all()
@@ -70,25 +53,14 @@ class FacturasController:
                 'id': det.id,
                 'id_producto': det.id_producto,
                 'codigo': prod.codigo if prod else f"PROD-{det.id_producto:03d}",
-                'nombre_producto': prod.nombre if prod else "Producto Comercial PYME",
+                'nombre_producto': prod.nombre if prod else "Producto",
                 'unidad_medida': prod.unidad_medida if prod else "UND",
                 'cantidad': det.cantidad,
                 'precio_unitario': det.precio_unitario,
                 'subtotal': det.subtotal
             })
 
-        # Si no hay ítems específicos guardados en la BD, generar desglose representativo
-        if not items_list:
-            items_list.append({
-                'id': 1,
-                'id_producto': 1,
-                'codigo': 'PROD-001',
-                'nombre_producto': 'Laptop Lenovo ThinkPad i7 (16GB RAM, 512GB SSD)',
-                'unidad_medida': 'UND',
-                'cantidad': 1,
-                'precio_unitario': factura.subtotal,
-                'subtotal': factura.subtotal
-            })
+        f_dict['detalles'] = items_list
 
         # Convertir objetos datetime a string para compatibilidad JSON
         if isinstance(f_dict.get('fecha'), datetime):
@@ -130,32 +102,51 @@ class FacturasController:
             fecha_factura = datetime.now()
 
         # Resolver o autovincular cliente
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        if not emp_id:
+            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para emitir la factura.")
+        id_empresa_val = int(emp_id)
+
+        # Resolver o autovincular cliente
         id_cliente = data.get("id_cliente") or data.get("cliente_id")
         if not id_cliente:
             doc_cliente = data.get("documento_cliente") or data.get("documento")
-            nom_cliente = data.get("cliente_nombre") or data.get("nombre_cliente") or "Cliente Comercial"
+            nom_cliente = data.get("cliente_nombre") or data.get("nombre_cliente")
             tipo_doc = data.get("tipo_documento") or "CC"
-            if doc_cliente:
-                cliente_existente = Clientes.get_by_documento(str(doc_cliente).strip())
+            if doc_cliente and str(doc_cliente).strip():
+                doc_clean = str(doc_cliente).strip()
+                cliente_existente = Clientes.get_by_documento(doc_clean, empresa_id=id_empresa_val)
+                if not cliente_existente:
+                    cliente_existente = Clientes.get_by_documento(doc_clean)
                 if cliente_existente:
                     id_cliente = cliente_existente.id
                 else:
-                    # Crear nuevo cliente automáticamente
+                    # Crear nuevo cliente para la empresa
                     nuevo_cliente = Clientes()
-                    nuevo_cliente.documento = str(doc_cliente).strip()
+                    nuevo_cliente.documento = doc_clean
                     nuevo_cliente.tipo_documento = tipo_doc
-                    nuevo_cliente.nombre = str(nom_cliente).strip()
+                    nuevo_cliente.nombre = str(nom_cliente or f"Cliente {doc_clean}").strip()
                     nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
                     nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
-                    nuevo_cliente.email = data.get("email_cliente", f"cliente_{doc_cliente}@correo.com")
+                    nuevo_cliente.email = data.get("email_cliente", f"cliente_{doc_clean}@correo.com")
                     nuevo_cliente.estado = "Activo"
-                    emp_cli = data.get("id_empresa") or data.get("empresa_id")
-                    nuevo_cliente.id_empresa = int(emp_cli) if emp_cli else None
+                    nuevo_cliente.id_empresa = id_empresa_val
                     nuevo_cliente.save()
                     id_cliente = nuevo_cliente.id
+            elif nom_cliente and str(nom_cliente).strip():
+                nuevo_cliente = Clientes()
+                nuevo_cliente.documento = f"CC-{int(datetime.now().timestamp())}"
+                nuevo_cliente.tipo_documento = tipo_doc
+                nuevo_cliente.nombre = str(nom_cliente).strip()
+                nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
+                nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
+                nuevo_cliente.email = data.get("email_cliente", f"cli_{int(datetime.now().timestamp())}@correo.com")
+                nuevo_cliente.estado = "Activo"
+                nuevo_cliente.id_empresa = id_empresa_val
+                nuevo_cliente.save()
+                id_cliente = nuevo_cliente.id
             else:
-                primer_cliente = session.query(Clientes).first()
-                id_cliente = primer_cliente.id if primer_cliente else 1
+                raise ValueError("Se requiere especificar el cliente para emitir la factura.")
 
         # Resolver id_metodo_pago
         id_metodo = data.get("id_metodo_pago")
@@ -177,10 +168,9 @@ class FacturasController:
         factura.total = data.get("total", total)
         factura.estado = data.get("estado", "Emitida")
         factura.id_cliente = int(id_cliente)
-        factura.id_usuario = int(data.get("id_usuario", 1))
+        factura.id_usuario = int(data.get("id_usuario") or 1)
         factura.id_metodo_pago = int(id_metodo or 1)
-        emp_id = data.get("id_empresa") or data.get("empresa_id")
-        factura.id_empresa = int(emp_id) if emp_id else None
+        factura.id_empresa = id_empresa_val
         
         factura.create()
 

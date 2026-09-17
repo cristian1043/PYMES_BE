@@ -10,6 +10,8 @@ class ProductosController:
         query = Productos.get_query()
         if empresa_id:
             query = query.filter(Productos.id_empresa == int(empresa_id))
+        else:
+            return []
         return query.all()
 
     @staticmethod
@@ -17,34 +19,51 @@ class ProductosController:
         query = Productos.get_query()
         if empresa_id:
             query = query.filter(Productos.id_empresa == int(empresa_id))
+        else:
+            # Aislamiento estricto: sin empresa_id especificada, no mezclar productos entre empresas
+            return paginate_query(query.filter(Productos.id_empresa == -1), page, per_page)
         return paginate_query(query, page, per_page)
 
     @staticmethod
     def get_by_id(id):
-        producto = Productos.get_by_id(id)
-
-        if producto is None:
-            return "Producto no encontrado"
-        
-        return producto
-
+        return Productos.get_by_id(id)
 
     @staticmethod
-    def obtener_siguiente_codigo():
-        productos = Productos.get()
+    def obtener_siguiente_codigo(empresa_id=None):
+        prefix = f"PROD-E{empresa_id}-" if empresa_id else "PROD-"
+        query = Productos.get_query()
+        if empresa_id:
+            query = query.filter(Productos.id_empresa == int(empresa_id))
+        productos = query.all()
         max_num = 0
         for p in productos:
-            if p.codigo and p.codigo.startswith("PROD-"):
-                num_part = p.codigo.replace("PROD-", "")
+            if p.codigo and prefix in p.codigo:
+                num_part = p.codigo.replace(prefix, "").strip()
                 if num_part.isdigit():
                     max_num = max(max_num, int(num_part))
-        return f"PROD-{max_num + 1:03d}"
+            elif p.codigo and p.codigo.startswith("PROD-"):
+                num_part = p.codigo.replace("PROD-", "").strip()
+                if num_part.isdigit():
+                    max_num = max(max_num, int(num_part))
+        
+        siguiente = max_num + 1
+        cand = f"{prefix}{siguiente:03d}"
+        while Productos.get_query().filter_by(codigo=cand).first() is not None:
+            siguiente += 1
+            cand = f"{prefix}{siguiente:03d}"
+        return cand
 
     @staticmethod
     def create(data):
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        if not emp_id:
+            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para registrar un producto.")
+        empresa_id_val = int(emp_id)
+
         producto = Productos()
-        producto.nombre = data.get("nombre", "")
-        producto.descripcion = data.get("descripcion", "")
+        producto.id_empresa = empresa_id_val
+        producto.nombre = str(data.get("nombre", "")).strip()
+        producto.descripcion = str(data.get("descripcion", "")).strip()
         producto.precio = float(data.get("precio", 0))
         costo_val = float(data.get("costo", 0))
         producto.costo = costo_val if costo_val > 0 else round(producto.precio * 0.70, 2)
@@ -58,13 +77,20 @@ class ProductosController:
         prov_id = data.get("id_proveedor")
         producto.id_proveedor = int(prov_id) if prov_id else None
 
-        # Generar código único secuencial (PROD-001, PROD-002, etc) siempre automático e inmutable
-        producto.codigo = ProductosController.obtener_siguiente_codigo()
+        # Asignar o generar código correlativo propio garantizado sin colisiones
+        codigo_enviado = (data.get("codigo") or "").strip()
+        if codigo_enviado:
+            existente = Productos.get_query().filter_by(codigo=codigo_enviado).first()
+            if existente:
+                producto.codigo = ProductosController.obtener_siguiente_codigo(empresa_id_val)
+            else:
+                producto.codigo = codigo_enviado
+        else:
+            producto.codigo = ProductosController.obtener_siguiente_codigo(empresa_id_val)
+
         producto.unidad_medida = data.get("unidad_medida", "UND")
         producto.estado = data.get("estado", "Activo")
         producto.imagen = data.get("imagen", None)
-        emp_id = data.get("id_empresa")
-        producto.id_empresa = int(emp_id) if emp_id else None
         
         producto.create()
         return producto
@@ -106,8 +132,8 @@ class ProductosController:
     def delete(id):
         producto = Productos.get_by_id(id)
         if producto is None:
-            return "Producto no encontrado"
+            return False
         # Desactivación lógica (Soft-Delete) para proteger integridad referencial de compras y facturas
         producto.estado = "Inactivo"
         producto.update()
-        return True and "Producto desactivado correctamente"
+        return True

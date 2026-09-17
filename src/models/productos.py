@@ -1,13 +1,14 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from src.models import Base, session
 from src.models.categorias import Categorias
+from src.models.proveedores import Proveedores
 
 
 class Productos(Base):
     __tablename__ = 'productos'
 
     id = Column(Integer, primary_key=True)
-    codigo = Column(String(50), unique=True, nullable=False)
+    codigo = Column(String(50), nullable=False)
     nombre = Column(String(255), nullable=False)
     descripcion = Column(String(255), nullable=False)
     unidad_medida = Column(String(3), nullable=False)
@@ -45,6 +46,8 @@ class Productos(Base):
 
     def to_dict(self):
         costo_val = self.costo if (self.costo is not None and self.costo > 0) else round((self.precio or 0.0) * 0.70, 2)
+        cat = session.query(Categorias).filter_by(id=self.id_categoria).first() if self.id_categoria else None
+        prov = session.query(Proveedores).filter_by(id=self.id_proveedor).first() if self.id_proveedor else None
         return {
             "id": self.id,
             "codigo": self.codigo,
@@ -55,7 +58,9 @@ class Productos(Base):
             "costo": costo_val,
             "stock": self.stock,
             "id_categoria": self.id_categoria,
+            "categoria_nombre": cat.nombre if cat else "Sin categoría",
             "id_proveedor": self.id_proveedor,
+            "proveedor_nombre": prov.nombre if prov else "Sin proveedor distribuidor",
             "estado": self.estado or "Activo",
             "imagen": self.imagen,
             "id_empresa": self.id_empresa
