@@ -150,14 +150,28 @@ class FacturasController:
 
         # Resolver id_metodo_pago
         id_metodo = data.get("id_metodo_pago")
-        if not id_metodo and data.get("metodo_pago"):
-            nom_mp = str(data.get("metodo_pago")).strip().lower()
-            if "tarjet" in nom_mp:
-                id_metodo = 3
-            elif "transf" in nom_mp or "nequi" in nom_mp or "davi" in nom_mp:
+        if id_metodo:
+            try:
+                id_metodo = int(id_metodo)
+            except (ValueError, TypeError):
+                id_metodo = 1
+        elif data.get("metodo_pago"):
+            nom_mp = str(data.get("metodo_pago")).strip()
+            from src.models.metodos_pago import MetodosPago
+            metodos_disponibles = MetodosPago.get_query().filter(
+                (MetodosPago.id_empresa == None) | (MetodosPago.id_empresa == id_empresa_val)
+            ).all()
+            match = next((m for m in metodos_disponibles if m.nombre.lower() == nom_mp.lower()), None)
+            if match:
+                id_metodo = match.id
+            elif "tarjet" in nom_mp.lower():
                 id_metodo = 2
+            elif "transf" in nom_mp.lower() or "nequi" in nom_mp.lower() or "davi" in nom_mp.lower():
+                id_metodo = 3
             else:
                 id_metodo = 1
+        else:
+            id_metodo = 1
 
         factura = Facturas()
         factura.numero = str(numero).strip()

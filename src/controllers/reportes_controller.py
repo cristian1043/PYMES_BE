@@ -84,6 +84,9 @@ class ReportesController:
                 resultado.append({
                     'id': cli.id,
                     'nombre': nombre_comp,
+                    'tipo_documento': getattr(cli, 'tipo_documento', 'CC') or 'CC',
+                    'documento': getattr(cli, 'documento', '') or 'Sin documento',
+                    'direccion': getattr(cli, 'direccion', '') or 'Sin dirección registrada',
                     'email': cli.email or 'Sin correo',
                     'telefono': cli.telefono or 'Sin teléfono',
                     'num_facturas': num_facturas,
