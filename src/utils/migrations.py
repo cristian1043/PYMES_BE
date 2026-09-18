@@ -94,6 +94,7 @@ class DatabaseMigrations:
                 # Columnas adicionales para la tabla proveedores
                 columnas_proveedores = [
                     "ALTER TABLE proveedores ADD COLUMN codigo VARCHAR(50)",
+                    "ALTER TABLE proveedores ADD COLUMN contacto VARCHAR(100)",
                     "ALTER TABLE proveedores ADD COLUMN detalle_servicios VARCHAR(500)",
                     "ALTER TABLE proveedores ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
                     "ALTER TABLE proveedores ADD COLUMN id_empresa INT"

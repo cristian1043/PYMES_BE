@@ -5,9 +5,10 @@ class Proveedores(Base):
     __tablename__ = 'proveedores'
 
     id = Column(Integer, primary_key=True)
-    codigo = Column(String(50), nullable=True)
     nit = Column(String(20), unique=True, nullable=False)
+    codigo = Column(String(50), nullable=True)
     nombre = Column(String(255), nullable=False)
+    contacto = Column(String(100), nullable=True)
     telefono = Column(String(20), nullable=False)
     direccion = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
@@ -44,8 +45,9 @@ class Proveedores(Base):
             "codigo": getattr(self, "codigo", None) or f"PROV-E{getattr(self, 'id_empresa', 1) or 1}-{self.id:03d}",
             "nit": self.nit,
             "nombre": self.nombre,
+            "contacto": getattr(self, "contacto", "") or "",
             "telefono": self.telefono,
-            "direccion": self.direccion,
+            "direccion": self.direccion or "",
             "email": self.email,
             "detalle_servicios": self.detalle_servicios or "",
             "estado": getattr(self, "estado", "Activo") or "Activo",
