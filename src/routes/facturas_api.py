@@ -42,7 +42,8 @@ def get_facturas():
 @facturas_bp.route("/siguiente_numero", methods=["GET"])
 @jwt_required()
 def get_siguiente_numero():
-    num = FacturasController.obtener_siguiente_numero()
+    emp_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    num = FacturasController.obtener_siguiente_numero(empresa_id=emp_id)
     return jsonify({"siguiente_numero": num}), 200
 
 # ===========================

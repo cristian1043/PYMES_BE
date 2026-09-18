@@ -72,25 +72,43 @@ class FacturasController:
         return f_dict
 
     @staticmethod
-    def obtener_siguiente_numero():
-        facturas = Facturas.get()
+    def obtener_siguiente_numero(empresa_id=None):
+        prefix = f"FAC-E{empresa_id}-" if empresa_id else "FAC-"
+        query = Facturas.get_query()
+        if empresa_id:
+            query = query.filter(Facturas.id_empresa == int(empresa_id))
+        facturas = query.all()
         max_num = 0
         for f in facturas:
-            if f.numero and f.numero.startswith("FAC-"):
-                try:
-                    num_part = int(f.numero.replace("FAC-", "").strip())
-                    if num_part > max_num:
-                        max_num = num_part
-                except ValueError:
-                    pass
+            if f.numero:
+                if f.numero.startswith(prefix):
+                    try:
+                        num_part = int(f.numero.replace(prefix, "").strip())
+                        if num_part > max_num:
+                            max_num = num_part
+                    except ValueError:
+                        pass
+                elif f.numero.startswith("FAC-"):
+                    try:
+                        num_part = int(f.numero.split("-")[-1].strip())
+                        if num_part > max_num:
+                            max_num = num_part
+                    except ValueError:
+                        pass
         siguiente = max_num + 1
-        return f"FAC-{siguiente:03d}"
+        return f"{prefix}{siguiente:03d}"
 
     @staticmethod
     def create(data):
+        # Resolver o autovincular empresa primero para el consecutivo
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        if not emp_id:
+            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para emitir la factura.")
+        id_empresa_val = int(emp_id)
+
         numero = data.get("numero")
         if not numero or not str(numero).strip():
-            numero = FacturasController.obtener_siguiente_numero()
+            numero = FacturasController.obtener_siguiente_numero(id_empresa_val)
 
         subtotal = float(data.get("subtotal", 0))
         iva = float(data.get("iva", 0))
@@ -100,12 +118,6 @@ class FacturasController:
         fecha_factura = data.get("fecha")
         if not fecha_factura:
             fecha_factura = datetime.now()
-
-        # Resolver o autovincular cliente
-        emp_id = data.get("id_empresa") or data.get("empresa_id")
-        if not emp_id:
-            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para emitir la factura.")
-        id_empresa_val = int(emp_id)
 
         # Resolver o autovincular cliente
         id_cliente = data.get("id_cliente") or data.get("cliente_id")
