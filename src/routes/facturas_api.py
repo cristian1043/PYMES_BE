@@ -139,3 +139,28 @@ def delete_factura(id):
     if eliminado:
         return jsonify({"mensaje": "Factura eliminada correctamente"}), 200
     return jsonify({"mensaje": "Factura no encontrada"}), 404
+
+# ===========================
+# Registrar Pago de Pasarela
+# ===========================
+@facturas_bp.route("/<int:id>/pagar", methods=["POST"])
+@jwt_required()
+@roles_required("Administrador", "Vendedor", "Contador")
+def pagar_factura(id):
+    claims = get_jwt() or {}
+    permitido, err_res, *code = validar_acceso_factura(id, claims)
+    if not permitido:
+        return err_res, (code[0] if code else 403)
+
+    data = request.get_json() or {}
+    pasarela = data.get("pasarela", "wompi")
+    referencia = data.get("referencia_pago") or data.get("referencia")
+    id_metodo = data.get("id_metodo_pago")
+
+    factura = FacturasController.registrar_pago_pasarela(id, pasarela=pasarela, referencia_pago=referencia, id_metodo_pago=id_metodo)
+    if factura:
+        return jsonify({
+            "mensaje": "Pago procesado y liquidado con éxito",
+            "factura": factura.to_dict()
+        }), 200
+    return jsonify({"mensaje": "Factura no encontrada"}), 404

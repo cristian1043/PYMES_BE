@@ -185,6 +185,8 @@ class FacturasController:
         factura.id_usuario = int(data.get("id_usuario") or 1)
         factura.id_metodo_pago = int(id_metodo or 1)
         factura.id_empresa = id_empresa_val
+        factura.pasarela = data.get("pasarela")
+        factura.referencia_pago = data.get("referencia_pago")
         
         factura.create()
 
@@ -239,7 +241,24 @@ class FacturasController:
         factura.id_cliente = int(data.get("id_cliente", factura.id_cliente))
         factura.id_usuario = int(data.get("id_usuario", factura.id_usuario))
         factura.id_metodo_pago = int(data.get("id_metodo_pago", factura.id_metodo_pago))
+        if "pasarela" in data:
+            factura.pasarela = data["pasarela"]
+        if "referencia_pago" in data:
+            factura.referencia_pago = data["referencia_pago"]
         
+        factura.update()
+        return factura
+
+    @staticmethod
+    def registrar_pago_pasarela(id, pasarela="wompi", referencia_pago=None, id_metodo_pago=None):
+        factura = Facturas.get_by_id(id)
+        if not factura:
+            return None
+        factura.estado = "Pagada"
+        factura.pasarela = str(pasarela or "wompi")
+        factura.referencia_pago = str(referencia_pago or f"TXN-{int(datetime.now().timestamp())}")
+        if id_metodo_pago:
+            factura.id_metodo_pago = int(id_metodo_pago)
         factura.update()
         return factura
 
