@@ -41,7 +41,9 @@ class DatabaseMigrations:
                 # Columnas adicionales para la tabla facturas
                 columnas_facturas = [
                     "ALTER TABLE facturas ADD COLUMN estado VARCHAR(20) DEFAULT 'Emitida'",
-                    "ALTER TABLE facturas ADD COLUMN id_empresa INT"
+                    "ALTER TABLE facturas ADD COLUMN id_empresa INT",
+                    "ALTER TABLE facturas ADD COLUMN pasarela VARCHAR(50)",
+                    "ALTER TABLE facturas ADD COLUMN referencia_pago VARCHAR(100)"
                 ]
                 for query in columnas_facturas:
                     try:
@@ -67,6 +69,8 @@ class DatabaseMigrations:
 
                 # Columnas adicionales para la tabla clientes
                 columnas_clientes = [
+                    "ALTER TABLE clientes ADD COLUMN apellido VARCHAR(100)",
+                    "ALTER TABLE clientes ADD COLUMN codigo VARCHAR(50)",
                     "ALTER TABLE clientes ADD COLUMN tipo_documento VARCHAR(20) DEFAULT 'CC'",
                     "ALTER TABLE clientes ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
                     "ALTER TABLE clientes ADD COLUMN tiene_tarjeta VARCHAR(5) DEFAULT 'No'",

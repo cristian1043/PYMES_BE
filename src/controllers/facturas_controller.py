@@ -132,6 +132,9 @@ class FacturasController:
                     cliente_existente = Clientes.get_by_documento(doc_clean)
                 if cliente_existente:
                     id_cliente = cliente_existente.id
+                    if not getattr(cliente_existente, "id_empresa", None):
+                        cliente_existente.id_empresa = id_empresa_val
+                        cliente_existente.update()
                 else:
                     # Crear nuevo cliente para la empresa
                     nom_full = str(nom_cliente or f"Cliente {doc_clean}").strip()
@@ -148,13 +151,24 @@ class FacturasController:
                     nuevo_cliente.tipo_documento = tipo_doc
                     nuevo_cliente.nombre = first_name
                     nuevo_cliente.apellido = last_name
-                    nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
-                    nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
-                    nuevo_cliente.email = data.get("email_cliente", f"cliente_{doc_clean}@correo.com")
+                    nuevo_cliente.direccion = data.get("direccion_cliente") or "Dirección Comercial"
+                    nuevo_cliente.telefono = data.get("telefono_cliente") or "3000000000"
+                    
+                    email_cand = data.get("email_cliente")
+                    if not email_cand or not str(email_cand).strip():
+                        email_cand = f"cli_{doc_clean}_{id_empresa_val}@correo.com"
+                    nuevo_cliente.email = str(email_cand).strip()
                     nuevo_cliente.estado = "Activo"
                     nuevo_cliente.id_empresa = id_empresa_val
-                    nuevo_cliente.save()
-                    id_cliente = nuevo_cliente.id
+                    
+                    try:
+                        nuevo_cliente.save()
+                        id_cliente = nuevo_cliente.id
+                    except Exception:
+                        session.rollback()
+                        nuevo_cliente.email = f"cli_{doc_clean}_{id_empresa_val}_{int(datetime.now().timestamp())}@correo.com"
+                        nuevo_cliente.save()
+                        id_cliente = nuevo_cliente.id
             elif nom_cliente and str(nom_cliente).strip():
                 nom_full = str(nom_cliente).strip()
                 parts = nom_full.split(" ", 1)
@@ -164,19 +178,26 @@ class FacturasController:
                 count_cli = session.query(Clientes).filter(Clientes.id_empresa == id_empresa_val).count()
                 cod_cli = f"CLI-E{id_empresa_val}-{count_cli + 1:03d}"
 
+                ts_suffix = int(datetime.now().timestamp())
                 nuevo_cliente = Clientes()
                 nuevo_cliente.codigo = cod_cli
-                nuevo_cliente.documento = f"CC-{int(datetime.now().timestamp())}"
+                nuevo_cliente.documento = f"CC-{ts_suffix}"
                 nuevo_cliente.tipo_documento = tipo_doc
                 nuevo_cliente.nombre = first_name
                 nuevo_cliente.apellido = last_name
-                nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
-                nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
-                nuevo_cliente.email = data.get("email_cliente", f"cli_{int(datetime.now().timestamp())}@correo.com")
+                nuevo_cliente.direccion = data.get("direccion_cliente") or "Dirección Comercial"
+                nuevo_cliente.telefono = data.get("telefono_cliente") or "3000000000"
+                nuevo_cliente.email = data.get("email_cliente") or f"cli_{ts_suffix}@correo.com"
                 nuevo_cliente.estado = "Activo"
                 nuevo_cliente.id_empresa = id_empresa_val
-                nuevo_cliente.save()
-                id_cliente = nuevo_cliente.id
+                try:
+                    nuevo_cliente.save()
+                    id_cliente = nuevo_cliente.id
+                except Exception:
+                    session.rollback()
+                    nuevo_cliente.email = f"cli_{ts_suffix}_{id_empresa_val}@correo.com"
+                    nuevo_cliente.save()
+                    id_cliente = nuevo_cliente.id
             else:
                 raise ValueError("Se requiere especificar el cliente para emitir la factura.")
 
