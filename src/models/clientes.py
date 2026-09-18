@@ -9,6 +9,8 @@ class Clientes(Base):
     documento = Column(String(50), unique=True, nullable=False)
     tipo_documento = Column(String(20), default='CC', nullable=True)
     nombre = Column(String(100), nullable=False)
+    apellido = Column(String(100), nullable=True)
+    codigo = Column(String(50), nullable=True)
     direccion = Column(String(255), nullable=False)
     telefono = Column(String(20), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
@@ -61,7 +63,9 @@ class Clientes(Base):
     def to_dict(self):
         return {
             "id": self.id,
+            "codigo": getattr(self, "codigo", None) or f"CLI-E{getattr(self, 'id_empresa', 1) or 1}-{self.id:03d}",
             "nombre": self.nombre,
+            "apellido": getattr(self, "apellido", "") or "",
             "documento": self.documento,
             "tipo_documento": getattr(self, "tipo_documento", "CC") or "CC",
             "direccion": self.direccion,

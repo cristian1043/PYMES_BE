@@ -65,15 +65,31 @@ class ComprasController:
         return c_dict
 
     @staticmethod
-    def obtener_siguiente_numero():
-        compras = Compras.get()
+    def obtener_siguiente_numero(empresa_id=None):
+        prefix = f"COMP-E{empresa_id}-" if empresa_id else "COMP-"
+        query = Compras.get_query()
+        if empresa_id:
+            query = query.filter(Compras.id_empresa == int(empresa_id))
+        compras = query.all()
         max_num = 0
         for c in compras:
-            if c.numero and c.numero.startswith("COMP-"):
-                num_part = c.numero.replace("COMP-", "")
-                if num_part.isdigit():
-                    max_num = max(max_num, int(num_part))
-        return f"COMP-{max_num + 1:03d}"
+            if c.numero:
+                if c.numero.startswith(prefix):
+                    try:
+                        num_part = int(c.numero.replace(prefix, "").strip())
+                        if num_part > max_num:
+                            max_num = num_part
+                    except ValueError:
+                        pass
+                elif c.numero.startswith("COMP-"):
+                    try:
+                        num_part = int(c.numero.split("-")[-1].strip())
+                        if num_part > max_num:
+                            max_num = num_part
+                    except ValueError:
+                        pass
+        siguiente = max_num + 1
+        return f"{prefix}{siguiente:03d}"
 
     @staticmethod
     def create(data):
@@ -82,14 +98,14 @@ class ComprasController:
         descuento = float(data.get("descuento", 0))
         total = subtotal + iva - descuento
 
-        num = data.get("numero")
-        if not num or num == "COMP-AUTO":
-            num = ComprasController.obtener_siguiente_numero()
-
         emp_id = data.get("id_empresa") or data.get("empresa_id")
         if not emp_id:
             raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para registrar la compra.")
         id_empresa_val = int(emp_id)
+
+        num = data.get("numero")
+        if not num or num == "COMP-AUTO" or str(num).strip() == "":
+            num = ComprasController.obtener_siguiente_numero(id_empresa_val)
 
         id_prov = data.get("id_proveedor")
         if not id_prov:

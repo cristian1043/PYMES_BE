@@ -43,7 +43,8 @@ def get_compras():
 @compras_bp.route("/siguiente_numero", methods=["GET"])
 @jwt_required()
 def get_siguiente_numero():
-    numero = ComprasController.obtener_siguiente_numero()
+    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    numero = ComprasController.obtener_siguiente_numero(empresa_id=empresa_id)
     return jsonify({"siguiente_numero": numero}), 200
 
 # ===========================

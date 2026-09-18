@@ -1,4 +1,5 @@
 from src.models.clientes import Clientes
+from src.models import session
 from src.utils.pagination import paginate_query
 
 class ClientesController:
@@ -39,6 +40,14 @@ class ClientesController:
         cliente.estado = data.get("estado", "Activo")
         emp_id = data.get("id_empresa") or data.get("empresa_id")
         cliente.id_empresa = int(emp_id) if emp_id else None
+        
+        # Generar código correlativo por empresa CLI-E{empresa_id}-{consecutivo:03d}
+        if data.get("codigo"):
+            cliente.codigo = data.get("codigo")
+        else:
+            eid = cliente.id_empresa or 1
+            count = session.query(Clientes).filter(Clientes.id_empresa == eid).count()
+            cliente.codigo = f"CLI-E{eid}-{count + 1:03d}"
         
         cliente.tiene_tarjeta = data.get("tiene_tarjeta", "No")
         cliente.tipo_tarjeta = data.get("tipo_tarjeta")

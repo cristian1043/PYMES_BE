@@ -134,10 +134,20 @@ class FacturasController:
                     id_cliente = cliente_existente.id
                 else:
                     # Crear nuevo cliente para la empresa
+                    nom_full = str(nom_cliente or f"Cliente {doc_clean}").strip()
+                    parts = nom_full.split(" ", 1)
+                    first_name = parts[0]
+                    last_name = parts[1] if len(parts) > 1 else ""
+
+                    count_cli = session.query(Clientes).filter(Clientes.id_empresa == id_empresa_val).count()
+                    cod_cli = f"CLI-E{id_empresa_val}-{count_cli + 1:03d}"
+
                     nuevo_cliente = Clientes()
+                    nuevo_cliente.codigo = cod_cli
                     nuevo_cliente.documento = doc_clean
                     nuevo_cliente.tipo_documento = tipo_doc
-                    nuevo_cliente.nombre = str(nom_cliente or f"Cliente {doc_clean}").strip()
+                    nuevo_cliente.nombre = first_name
+                    nuevo_cliente.apellido = last_name
                     nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
                     nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
                     nuevo_cliente.email = data.get("email_cliente", f"cliente_{doc_clean}@correo.com")
@@ -146,10 +156,20 @@ class FacturasController:
                     nuevo_cliente.save()
                     id_cliente = nuevo_cliente.id
             elif nom_cliente and str(nom_cliente).strip():
+                nom_full = str(nom_cliente).strip()
+                parts = nom_full.split(" ", 1)
+                first_name = parts[0]
+                last_name = parts[1] if len(parts) > 1 else ""
+
+                count_cli = session.query(Clientes).filter(Clientes.id_empresa == id_empresa_val).count()
+                cod_cli = f"CLI-E{id_empresa_val}-{count_cli + 1:03d}"
+
                 nuevo_cliente = Clientes()
+                nuevo_cliente.codigo = cod_cli
                 nuevo_cliente.documento = f"CC-{int(datetime.now().timestamp())}"
                 nuevo_cliente.tipo_documento = tipo_doc
-                nuevo_cliente.nombre = str(nom_cliente).strip()
+                nuevo_cliente.nombre = first_name
+                nuevo_cliente.apellido = last_name
                 nuevo_cliente.direccion = data.get("direccion_cliente", "Dirección Comercial")
                 nuevo_cliente.telefono = data.get("telefono_cliente", "3000000000")
                 nuevo_cliente.email = data.get("email_cliente", f"cli_{int(datetime.now().timestamp())}@correo.com")
