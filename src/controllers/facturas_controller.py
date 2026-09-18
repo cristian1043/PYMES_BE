@@ -132,9 +132,18 @@ class FacturasController:
                     cliente_existente = Clientes.get_by_documento(doc_clean)
                 if cliente_existente:
                     id_cliente = cliente_existente.id
-                    if not getattr(cliente_existente, "id_empresa", None):
-                        cliente_existente.id_empresa = id_empresa_val
-                        cliente_existente.update()
+                    cliente_existente.id_empresa = id_empresa_val
+                    cliente_existente.estado = "Activo"
+                    if nom_cliente and str(nom_cliente).strip():
+                        parts = str(nom_cliente).strip().split(" ", 1)
+                        cliente_existente.nombre = parts[0]
+                        if len(parts) > 1 and hasattr(cliente_existente, 'apellido'):
+                            cliente_existente.apellido = parts[1]
+                    if data.get("telefono_cliente"):
+                        cliente_existente.telefono = str(data.get("telefono_cliente")).strip()
+                    if data.get("direccion_cliente"):
+                        cliente_existente.direccion = str(data.get("direccion_cliente")).strip()
+                    cliente_existente.update()
                 else:
                     # Crear nuevo cliente para la empresa
                     nom_full = str(nom_cliente or f"Cliente {doc_clean}").strip()
@@ -166,9 +175,16 @@ class FacturasController:
                         id_cliente = nuevo_cliente.id
                     except Exception:
                         session.rollback()
-                        nuevo_cliente.email = f"cli_{doc_clean}_{id_empresa_val}_{int(datetime.now().timestamp())}@correo.com"
-                        nuevo_cliente.save()
-                        id_cliente = nuevo_cliente.id
+                        cli_dup = session.query(Clientes).filter(Clientes.documento == doc_clean).first()
+                        if cli_dup:
+                            cli_dup.id_empresa = id_empresa_val
+                            cli_dup.estado = "Activo"
+                            cli_dup.update()
+                            id_cliente = cli_dup.id
+                        else:
+                            nuevo_cliente.email = f"cli_{doc_clean}_{id_empresa_val}_{int(datetime.now().timestamp())}@correo.com"
+                            nuevo_cliente.save()
+                            id_cliente = nuevo_cliente.id
             elif nom_cliente and str(nom_cliente).strip():
                 nom_full = str(nom_cliente).strip()
                 parts = nom_full.split(" ", 1)
@@ -200,6 +216,13 @@ class FacturasController:
                     id_cliente = nuevo_cliente.id
             else:
                 raise ValueError("Se requiere especificar el cliente para emitir la factura.")
+
+        if id_cliente:
+            cli_asoc = Clientes.get_by_id(id_cliente)
+            if cli_asoc and (not getattr(cli_asoc, 'id_empresa', None) or cli_asoc.id_empresa == 1):
+                cli_asoc.id_empresa = id_empresa_val
+                cli_asoc.estado = "Activo"
+                cli_asoc.update()
 
         # Resolver id_metodo_pago
         id_metodo = data.get("id_metodo_pago")

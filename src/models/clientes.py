@@ -48,10 +48,24 @@ class Clientes(Base):
         if not documento:
             return None
         doc_str = str(documento).strip()
-        query = session.query(Clientes).filter(Clientes.documento == doc_str)
         if empresa_id:
-            query = query.filter(Clientes.id_empresa == empresa_id)
-        return query.first()
+            try:
+                eid = int(empresa_id)
+            except (ValueError, TypeError):
+                eid = 1
+            c = session.query(Clientes).filter(Clientes.documento == doc_str, Clientes.id_empresa == eid).first()
+            if c:
+                return c
+            # Si no existe con id_empresa específico, buscar si existe huérfano o general
+            c_loose = session.query(Clientes).filter(Clientes.documento == doc_str).first()
+            if c_loose:
+                if not getattr(c_loose, 'id_empresa', None):
+                    c_loose.id_empresa = eid
+                    c_loose.estado = "Activo"
+                    c_loose.update()
+                return c_loose
+            return None
+        return session.query(Clientes).filter(Clientes.documento == doc_str).first()
 
     def update(self):
         session.commit()

@@ -8,7 +8,11 @@ class ClientesController:
     def get(empresa_id=None):
         query = Clientes.get_query()
         if empresa_id:
-            query = query.filter(Clientes.id_empresa == int(empresa_id))
+            eid = int(empresa_id)
+            if eid == 1:
+                query = query.filter((Clientes.id_empresa == eid) | (Clientes.id_empresa == None))
+            else:
+                query = query.filter(Clientes.id_empresa == eid)
         else:
             return []
         return query.all()
@@ -17,7 +21,11 @@ class ClientesController:
     def get_paginated(page=1, per_page=10, empresa_id=None):
         query = Clientes.get_query()
         if empresa_id:
-            query = query.filter(Clientes.id_empresa == int(empresa_id))
+            eid = int(empresa_id)
+            if eid == 1:
+                query = query.filter((Clientes.id_empresa == eid) | (Clientes.id_empresa == None))
+            else:
+                query = query.filter(Clientes.id_empresa == eid)
         else:
             return paginate_query(query.filter(Clientes.id_empresa == -1), page, per_page)
         return paginate_query(query, page, per_page)
@@ -28,24 +36,46 @@ class ClientesController:
 
     @staticmethod
     def create(data):
+        doc_input = str(data.get("documento", "")).strip()
+        emp_id = data.get("id_empresa") or data.get("empresa_id") or 1
+        eid = int(emp_id)
+
+        # Si ya existe un cliente con este documento, actualizarlo y vincularlo a la empresa activa
+        if doc_input:
+            cliente_existente = session.query(Clientes).filter(Clientes.documento == doc_input).first()
+            if cliente_existente:
+                cliente_existente.nombre = data.get("nombre") or cliente_existente.nombre
+                if hasattr(cliente_existente, 'apellido') and data.get("apellido"):
+                    cliente_existente.apellido = data.get("apellido")
+                cliente_existente.direccion = data.get("direccion") or cliente_existente.direccion
+                cliente_existente.telefono = data.get("telefono") or cliente_existente.telefono
+                if data.get("email"):
+                    cliente_existente.email = data.get("email")
+                cliente_existente.tipo_documento = data.get("tipo_documento", getattr(cliente_existente, 'tipo_documento', 'CC'))
+                cliente_existente.id_empresa = eid
+                cliente_existente.estado = "Activo"
+                cliente_existente.update()
+                return cliente_existente
+
         cliente = Clientes()
-        cliente.documento = data.get("documento", "")
+        cliente.documento = doc_input
         cliente.nombre = data.get("nombre", "")
         if hasattr(cliente, 'apellido'):
             cliente.apellido = data.get("apellido", "")
         cliente.direccion = data.get("direccion", "")
         cliente.telefono = data.get("telefono", "")
-        cliente.email = data.get("email", "")
+        email_cand = data.get("email", "")
+        if not email_cand:
+            email_cand = f"cli_{doc_input}_{eid}@correo.com"
+        cliente.email = email_cand
         cliente.tipo_documento = data.get("tipo_documento", "CC")
         cliente.estado = data.get("estado", "Activo")
-        emp_id = data.get("id_empresa") or data.get("empresa_id")
-        cliente.id_empresa = int(emp_id) if emp_id else None
+        cliente.id_empresa = eid
         
         # Generar código correlativo por empresa CLI-E{empresa_id}-{consecutivo:03d}
         if data.get("codigo"):
             cliente.codigo = data.get("codigo")
         else:
-            eid = cliente.id_empresa or 1
             count = session.query(Clientes).filter(Clientes.id_empresa == eid).count()
             cliente.codigo = f"CLI-E{eid}-{count + 1:03d}"
         
@@ -61,7 +91,14 @@ class ClientesController:
         cliente.fecha_expiracion = None
         cliente.cvc_tarjeta = None
 
-        cliente.save()
+        from datetime import datetime
+        try:
+            cliente.save()
+        except Exception:
+            session.rollback()
+            cliente.email = f"cli_{doc_input}_{eid}_{int(datetime.now().timestamp())}@correo.com"
+            cliente.save()
+
         return cliente
 
     @staticmethod

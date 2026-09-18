@@ -118,5 +118,20 @@ class DatabaseMigrations:
                         conn.commit()
                     except Exception:
                         pass
+
+                # Reparación y saneamiento automático de registros huérfanos sin id_empresa
+                reparaciones = [
+                    "UPDATE clientes SET id_empresa = 1 WHERE id_empresa IS NULL",
+                    "UPDATE facturas SET id_empresa = 1 WHERE id_empresa IS NULL",
+                    "UPDATE proveedores SET id_empresa = 1 WHERE id_empresa IS NULL",
+                    "UPDATE productos SET id_empresa = 1 WHERE id_empresa IS NULL",
+                    "UPDATE compras SET id_empresa = 1 WHERE id_empresa IS NULL"
+                ]
+                for rep in reparaciones:
+                    try:
+                        conn.execute(text(rep))
+                        conn.commit()
+                    except Exception:
+                        pass
         except Exception:
             pass
