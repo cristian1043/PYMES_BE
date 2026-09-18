@@ -1,4 +1,5 @@
 from src.models.proveedores import Proveedores
+from src.models import session
 from src.utils.pagination import paginate_query
 
 class ProveedoresController:
@@ -39,6 +40,15 @@ class ProveedoresController:
         proveedor.estado = data.get("estado", "Activo")
         emp_id = data.get("id_empresa") or data.get("empresa_id")
         proveedor.id_empresa = int(emp_id) if emp_id else None
+
+        # Generar código correlativo por empresa PROV-E{empresa_id}-{consecutivo:03d}
+        if data.get("codigo"):
+            proveedor.codigo = data.get("codigo")
+        else:
+            eid = proveedor.id_empresa or 1
+            count = session.query(Proveedores).filter(Proveedores.id_empresa == eid).count()
+            proveedor.codigo = f"PROV-E{eid}-{count + 1:03d}"
+
         proveedor.save()
         return proveedor
 

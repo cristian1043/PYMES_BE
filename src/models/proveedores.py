@@ -5,6 +5,7 @@ class Proveedores(Base):
     __tablename__ = 'proveedores'
 
     id = Column(Integer, primary_key=True)
+    codigo = Column(String(50), nullable=True)
     nit = Column(String(20), unique=True, nullable=False)
     nombre = Column(String(255), nullable=False)
     telefono = Column(String(20), nullable=False)
@@ -40,6 +41,7 @@ class Proveedores(Base):
     def to_dict(self):
         return {
             "id": self.id,
+            "codigo": getattr(self, "codigo", None) or f"PROV-E{getattr(self, 'id_empresa', 1) or 1}-{self.id:03d}",
             "nit": self.nit,
             "nombre": self.nombre,
             "telefono": self.telefono,
