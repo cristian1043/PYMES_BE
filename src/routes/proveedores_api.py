@@ -24,6 +24,22 @@ def get_proveedores():
     return jsonify(resultado), 200
 
 # ===========================
+# Obtener siguiente código correlativo de proveedor
+# ===========================
+@proveedores_bp.route("/siguiente-codigo", methods=["GET"])
+@jwt_required()
+@tenant_required(allow_global_admin=True)
+def get_siguiente_codigo():
+    empresa_id = (
+        request.args.get("empresa_id") or 
+        request.args.get("id_empresa") or 
+        request.headers.get("X-Empresa-ID") or 
+        request.environ.get('tenant_empresa_id') or 1
+    )
+    codigo = ProveedoresController.obtener_siguiente_codigo(empresa_id)
+    return jsonify({"siguiente_codigo": codigo}), 200
+
+# ===========================
 # Obtener un proveedor
 # ===========================
 @proveedores_bp.route("/<int:id>", methods=["GET"])

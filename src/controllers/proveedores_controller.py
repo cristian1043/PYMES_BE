@@ -27,6 +27,35 @@ class ProveedoresController:
         return Proveedores.get_by_id(id)
 
     @staticmethod
+    def obtener_siguiente_codigo(empresa_id=None):
+        eid = int(empresa_id) if empresa_id else 1
+        prefix = f"PROV-E{eid}-"
+        query = session.query(Proveedores).filter(Proveedores.id_empresa == eid)
+        proveedores = query.all()
+        max_num = 0
+        for p in proveedores:
+            cod = getattr(p, "codigo", None)
+            if cod:
+                if cod.startswith(prefix):
+                    try:
+                        num = int(cod.replace(prefix, "").strip())
+                        if num > max_num:
+                            max_num = num
+                    except ValueError:
+                        pass
+                elif "PROV-" in cod:
+                    try:
+                        num = int(cod.split("-")[-1].strip())
+                        if num > max_num:
+                            max_num = num
+                    except ValueError:
+                        pass
+            elif p.id and p.id > max_num:
+                max_num = p.id
+        siguiente = max_num + 1
+        return f"{prefix}{siguiente:03d}"
+
+    @staticmethod
     def create(data):
         proveedor = Proveedores()
         proveedor.nit = data.get("nit", "")
@@ -46,8 +75,7 @@ class ProveedoresController:
             proveedor.codigo = data.get("codigo")
         else:
             eid = proveedor.id_empresa or 1
-            count = session.query(Proveedores).filter(Proveedores.id_empresa == eid).count()
-            proveedor.codigo = f"PROV-E{eid}-{count + 1:03d}"
+            proveedor.codigo = ProveedoresController.obtener_siguiente_codigo(eid)
 
         proveedor.save()
         return proveedor
