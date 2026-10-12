@@ -1,0 +1,21 @@
+$kind: http-request
+description: Ajusta la ruta al endpoint de listado real. Espera HTTP 200 y JSON si este es el contrato de la API.
+url: "{{base_url}}{{categorias_path}}"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('La API responde HTTP 200', function () {
+          pm.response.to.have.status(200);
+      });
+      pm.test('La respuesta es JSON', function () {
+          const tipo = pm.response.headers.get('Content-Type') || '';
+          pm.expect(tipo).to.include('application/json');
+      });
+      pm.test('La respuesta tarda menos de 2 segundos', function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+    language: text/javascript
+order: 1000

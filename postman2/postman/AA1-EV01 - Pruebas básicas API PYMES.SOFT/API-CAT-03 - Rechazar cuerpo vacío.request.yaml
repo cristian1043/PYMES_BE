@@ -1,0 +1,21 @@
+$kind: http-request
+description: Prueba negativa. El cuerpo vacío debe ser rechazado por validación. Se aceptan 400 o 422 como ejemplos habituales; confirma el contrato real del proyecto. Nunca des por correcto un 500.
+url: "{{base_url}}{{categorias_path}}"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: "{}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('La entrada inválida no se acepta como éxito', function () {
+          pm.expect(pm.response.code).to.be.oneOf([400, 422]);
+      });
+      pm.test('La validación no produce error interno 5xx', function () {
+          pm.expect(pm.response.code).to.be.below(500);
+      });
+    language: text/javascript
+order: 3000

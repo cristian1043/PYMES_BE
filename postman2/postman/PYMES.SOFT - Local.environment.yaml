@@ -1,0 +1,9 @@
+name: PYMES.SOFT - Local
+values:
+  - key: base_url
+    value: 'http://127.0.0.1:5000'
+  - key: categorias_path
+    value: /api/categorias
+  - key: categoria_id_inexistente
+    value: '999999'
+color: 240

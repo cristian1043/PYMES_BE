@@ -9,6 +9,7 @@ categorias_bp = Blueprint("categorias", __name__)
 # Obtener todas las categorías
 # ===========================
 @categorias_bp.route("/", methods=["GET"])
+@categorias_bp.route("", methods=["GET"])
 @jwt_required(optional=True)
 def get_categorias():
     categorias = CategoriasController.get()
@@ -29,6 +30,7 @@ def get_categoria(id):
 # Crear categoría
 # ===========================
 @categorias_bp.route("/", methods=["POST"])
+@categorias_bp.route("", methods=["POST"])
 @jwt_required()
 @roles_required("Administrador", 1)
 def create_categoria():

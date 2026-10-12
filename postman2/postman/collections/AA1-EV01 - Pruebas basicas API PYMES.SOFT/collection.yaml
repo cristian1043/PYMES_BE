@@ -1,0 +1,6 @@
+$kind: collection
+name: AA1-EV01 - Pruebas básicas API PYMES.SOFT
+order:
+  - "API-CAT-01 - Listar categorías"
+  - "API-CAT-02 - Consultar categoría inexistente"
+  - "API-CAT-03 - Rechazar cuerpo vacío"

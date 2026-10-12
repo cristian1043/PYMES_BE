@@ -1,0 +1,156 @@
+{
+  "info": {
+    "_postman_id": "c7d2fcac-6e15-4bf3-a2c1-aa1e01a0b001",
+    "name": "AA1-EV01 - Pruebas básicas API PYMES.SOFT",
+    "description": "Colección educativa. Verifica listado de categorías y escenarios negativos. Antes de ejecutarla, revisa base_url y categorias_path según las rutas reales de PYMES.SOFT. No se asume que la ruta por ID exista: habilita o ajusta ese caso si corresponde.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5000",
+      "type": "string"
+    },
+    {
+      "key": "categorias_path",
+      "value": "/api/categorias",
+      "type": "string"
+    },
+    {
+      "key": "categoria_id_inexistente",
+      "value": "999999",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "API-CAT-01 - Listar categorías",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}{{categorias_path}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "{{categorias_path}}"
+          ]
+        },
+        "description": "Ajusta la ruta al endpoint de listado real. Espera HTTP 200 y JSON si este es el contrato de la API."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La API responde HTTP 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('La respuesta es JSON', function () {",
+              "    const tipo = pm.response.headers.get('Content-Type') || '';",
+              "    pm.expect(tipo).to.include('application/json');",
+              "});",
+              "pm.test('La respuesta tarda menos de 2 segundos', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "API-CAT-02 - Consultar categoría inexistente (ajustar si aplica)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}{{categorias_path}}/{{categoria_id_inexistente}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "{{categorias_path}}",
+            "{{categoria_id_inexistente}}"
+          ]
+        },
+        "description": "Ejecuta solo si la API tiene una ruta GET /categorias/{id}. El contrato esperado en este caso es HTTP 404; ajusta la ruta/código si el proyecto define otra convención."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La categoría inexistente devuelve HTTP 404', function () {",
+              "    pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "API-CAT-03 - Rechazar cuerpo vacío",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}{{categorias_path}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "{{categorias_path}}"
+          ]
+        },
+        "description": "Prueba negativa. El cuerpo vacío debe ser rechazado por validación. Se aceptan 400 o 422 como ejemplos habituales; confirma el contrato real del proyecto. Nunca des por correcto un 500."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('La entrada inválida no se acepta como éxito', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});",
+              "pm.test('La validación no produce error interno 5xx', function () {",
+              "    pm.expect(pm.response.code).to.be.below(500);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

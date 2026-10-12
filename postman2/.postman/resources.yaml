@@ -1,0 +1,9 @@
+# Use this workspace to collaborate
+workspace:
+  id: caf3aeab-81b9-4440-9613-a6bf30b590a7
+
+localResources:
+  collections:
+    - collections/AA1-EV01 - Pruebas basicas API PYMES.SOFT/
+  environments:
+    - environments/PYMES.SOFT - Local.environment.yaml

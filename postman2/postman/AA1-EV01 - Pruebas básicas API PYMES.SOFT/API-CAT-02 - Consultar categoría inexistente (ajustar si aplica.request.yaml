@@ -1,0 +1,15 @@
+$kind: http-request
+name: API-CAT-02 - Consultar categoría inexistente (ajustar si aplica)
+description: Ejecuta solo si la API tiene una ruta GET /categorias/{id}. El contrato esperado en este caso es HTTP 404; ajusta la ruta/código si el proyecto define otra convención.
+url: "{{base_url}}{{categorias_path}}/{{categoria_id_inexistente}}"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('La categoría inexistente devuelve HTTP 404', function () {
+          pm.response.to.have.status(404);
+      });
+    language: text/javascript
+order: 2000

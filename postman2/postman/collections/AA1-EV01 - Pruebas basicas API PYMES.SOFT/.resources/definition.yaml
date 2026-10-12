@@ -1,0 +1,7 @@
+$kind: collection
+name: AA1-EV01 - Pruebas básicas API PYMES.SOFT
+description: "Colección educativa. Verifica listado de categorías y escenarios negativos. Antes de ejecutarla, revisa base_url y categorias_path según las rutas reales de PYMES.SOFT. No se asume que la ruta por ID exista: habilita o ajusta ese caso si corresponde."
+variables:
+  base_url: http://127.0.0.1:5000
+  categorias_path: /api/categorias
+  categoria_id_inexistente: "999999"
