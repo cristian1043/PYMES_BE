@@ -49,6 +49,7 @@ class Terminales(Base):
             "id_metodo_pago": self.id_metodo_pago,
             "metodo_pago_nombre": metodo_nombre,
             "terminal_serial": self.terminal_serial,
+            "codigo_terminal": self.terminal_serial,
             "terminal_model": self.terminal_model,
             "email_usuario": self.email_usuario,
             "estado": self.estado or "Activo",

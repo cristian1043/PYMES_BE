@@ -40,9 +40,10 @@ class FacturasController:
         usuario = Usuarios.get_by_id(factura.id_usuario)
         f_dict['usuario'] = usuario.to_dict() if usuario else None
 
-        # 3. Enriquecer Método de Pago por Nombre
+        # 3. Enriquecer Método de Pago por Nombre y Detalle
         metodo = MetodosPago.get_by_id(factura.id_metodo_pago)
-        f_dict['metodo_pago'] = metodo.to_dict() if metodo else {'nombre': 'No especificado'}
+        f_dict['metodo_pago_detalle'] = metodo.to_dict() if metodo else {'nombre': 'Efectivo', 'pasarela': 'ninguna', 'integrado': False}
+        f_dict['metodo_pago'] = metodo.nombre if metodo else 'Efectivo'
 
         # 4. Enriquecer Lista de Productos e Ítems Comprados (DetalleFacturas)
         detalles_db = session.query(DetalleFacturas).filter_by(id_factura=id).all()
@@ -114,6 +115,12 @@ class FacturasController:
         if not emp_id:
             emp_id = 1
         id_empresa_val = int(emp_id)
+
+        try:
+            from src.utils.migrations import DatabaseMigrations
+            DatabaseMigrations.asegurar_esquema_y_datos(empresa_id=id_empresa_val)
+        except Exception:
+            pass
 
         numero = data.get("numero")
         if not numero or not str(numero).strip():
@@ -233,30 +240,50 @@ class FacturasController:
                 cli_asoc.estado = "Activo"
                 cli_asoc.update()
 
-        # Resolver id_metodo_pago
+        # Resolver id_metodo_pago garantizando que exista en la tabla metodos_pago (FK segura)
         id_metodo = data.get("id_metodo_pago")
-        if id_metodo:
-            try:
-                id_metodo = int(id_metodo)
-            except (ValueError, TypeError):
-                id_metodo = 1
-        elif data.get("metodo_pago"):
-            nom_mp = str(data.get("metodo_pago")).strip()
-            from src.models.metodos_pago import MetodosPago
-            metodos_disponibles = MetodosPago.get_query().filter(
-                (MetodosPago.id_empresa == None) | (MetodosPago.id_empresa == id_empresa_val)
-            ).all()
-            match = next((m for m in metodos_disponibles if m.nombre.lower() == nom_mp.lower()), None)
-            if match:
-                id_metodo = match.id
-            elif "tarjet" in nom_mp.lower():
-                id_metodo = 2
-            elif "transf" in nom_mp.lower() or "nequi" in nom_mp.lower() or "davi" in nom_mp.lower():
-                id_metodo = 3
-            else:
-                id_metodo = 1
-        else:
-            id_metodo = 1
+        nom_mp = str(data.get("metodo_pago") or "").strip()
+        metodo_sel = None
+
+        if id_metodo and str(id_metodo).isdigit():
+            metodo_sel = MetodosPago.get_by_id(int(id_metodo))
+
+        if not metodo_sel:
+            todos_metodos = MetodosPago.get_query().all()
+            if not todos_metodos:
+                nuevo_mp = MetodosPago(
+                    nombre="Efectivo",
+                    descripcion="Pago en efectivo en caja",
+                    tipo="Efectivo",
+                    pasarela="ninguna",
+                    modo="sandbox",
+                    estado="Activo",
+                    id_empresa=None
+                )
+                session.add(nuevo_mp)
+                session.commit()
+                todos_metodos = [nuevo_mp]
+
+            if nom_mp:
+                nom_low = nom_mp.lower()
+                metodo_sel = next((m for m in todos_metodos if (m.nombre or "").lower() == nom_low), None)
+                if not metodo_sel:
+                    if "bold" in nom_low or "datafono" in nom_low or "datáfono" in nom_low or "tarjet" in nom_low:
+                        metodo_sel = next((m for m in todos_metodos if (m.tipo or "").lower() == "tarjeta" or "bold" in (m.nombre or "").lower()), None)
+                    elif "wompi" in nom_low or "pse" in nom_low or "link" in nom_low:
+                        metodo_sel = next((m for m in todos_metodos if (m.tipo or "").lower() == "pasarela" or "wompi" in (m.nombre or "").lower()), None)
+                    elif "transf" in nom_low or "nequi" in nom_low or "davi" in nom_low:
+                        metodo_sel = next((m for m in todos_metodos if (m.tipo or "").lower() == "transferencia" or "transf" in (m.nombre or "").lower()), None)
+
+            if not metodo_sel and str(id_metodo or "") == "2":
+                metodo_sel = next((m for m in todos_metodos if (m.tipo or "").lower() == "tarjeta" or (m.tipo or "").lower() == "transferencia"), None)
+            elif not metodo_sel and str(id_metodo or "") == "3":
+                metodo_sel = next((m for m in todos_metodos if (m.tipo or "").lower() == "transferencia" or (m.tipo or "").lower() == "tarjeta"), None)
+
+            if not metodo_sel:
+                metodo_sel = todos_metodos[0]
+
+        id_metodo = metodo_sel.id
 
         factura = Facturas()
         factura.numero = str(numero).strip()
@@ -266,22 +293,22 @@ class FacturasController:
         factura.descuento = descuento
         # El total siempre se calcula en el servidor (no se confía en el valor enviado por el cliente)
         factura.total = total
-        factura.estado = data.get("estado", "Emitida")
         factura.id_cliente = int(id_cliente)
         factura.id_usuario = int(data.get("id_usuario") or 1)
-        factura.id_metodo_pago = int(id_metodo or 1)
+        factura.id_metodo_pago = int(id_metodo)
         factura.id_empresa = id_empresa_val
-        factura.pasarela = data.get("pasarela")
-        factura.referencia_pago = data.get("referencia_pago")
 
-        # Métodos con pasarela integrada (Bold / Wompi / Simulado): la factura nace 'Emitida' y solo
-        # pasa a 'Pagada' cuando la pasarela confirma el cobro (ver src/services/pagos).
-        metodo_sel = MetodosPago.get_by_id(factura.id_metodo_pago)
-        if metodo_sel is not None and metodo_sel.integrado:
-            if factura.estado == "Pagada":
-                factura.estado = "Emitida"
+        # Si es un método de pago directo (Efectivo, Transferencia, etc.), liquidar como Pagada de inmediato
+        if metodo_sel is not None and metodo_sel.integrado and not data.get("aprobar_inmediato"):
+            factura.estado = "Emitida"
             factura.pasarela = None
             factura.referencia_pago = None
+        else:
+            factura.estado = data.get("estado") or "Pagada"
+            if factura.estado == "Emitida" and not (metodo_sel and metodo_sel.integrado):
+                factura.estado = "Pagada"
+            factura.pasarela = data.get("pasarela") or (metodo_sel.pasarela if (metodo_sel and metodo_sel.pasarela != "ninguna") else "caja")
+            factura.referencia_pago = data.get("referencia_pago") or f"PAGO-{int(datetime.now().timestamp())}"
         
         factura.create()
 
@@ -355,21 +382,17 @@ class FacturasController:
 
     @staticmethod
     def registrar_pago_pasarela(id, pasarela="manual", referencia_pago=None, id_metodo_pago=None):
-        """Registro manual de pago (efectivo, transferencia, datáfono no integrado, etc.)."""
+        """Registro directo de pago en caja (efectivo, transferencia o confirmación manual)."""
         factura = Facturas.get_by_id(id)
         if not factura:
             return None
-        metodo = MetodosPago.get_by_id(int(id_metodo_pago or factura.id_metodo_pago))
-        if metodo is not None and metodo.integrado:
-            raise ValueError(
-                "Este método de pago tiene pasarela integrada: el pago debe iniciarse con "
-                "POST /api/facturas/<id>/cobros y se confirma automáticamente."
-            )
+        if id_metodo_pago and str(id_metodo_pago).isdigit():
+            metodo = MetodosPago.get_by_id(int(id_metodo_pago))
+            if metodo:
+                factura.id_metodo_pago = metodo.id
         factura.estado = "Pagada"
-        factura.pasarela = str(pasarela or "manual")
-        factura.referencia_pago = str(referencia_pago or f"TXN-{int(datetime.now().timestamp())}")
-        if id_metodo_pago:
-            factura.id_metodo_pago = int(id_metodo_pago)
+        factura.pasarela = str(pasarela or "caja")
+        factura.referencia_pago = str(referencia_pago or f"CAJA-{int(datetime.now().timestamp())}")
         factura.update()
         return factura
 

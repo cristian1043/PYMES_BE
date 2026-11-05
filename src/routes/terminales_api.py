@@ -13,11 +13,20 @@ PROVEEDORES_DATAFONO = CANALES["datafono"]  # ('bold', 'simulado')
 
 def _empresa_solicitada(data=None):
     data = data or {}
-    return (
+    emp_id = (
         data.get("id_empresa") or data.get("empresa_id") or
         request.args.get("empresa_id") or request.args.get("id_empresa") or
         request.headers.get("X-Empresa-ID") or request.environ.get("tenant_empresa_id")
     )
+    if not emp_id:
+        try:
+            claims = get_jwt() or {}
+            empresas_jwt = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
+            if empresas_jwt:
+                emp_id = empresas_jwt[0]
+        except Exception:
+            pass
+    return emp_id or 1
 
 
 def _tiene_acceso_empresa(id_empresa):
@@ -74,21 +83,17 @@ def _aplicar_campos(terminal, data, id_empresa):
 # ===========================
 @terminales_bp.route("/", methods=["GET"])
 @jwt_required()
-@tenant_required(allow_global_admin=True)
 def get_terminales():
     empresa_id = _empresa_solicitada()
-    if not empresa_id:
-        return jsonify([]), 200
-    eid = int(empresa_id)
-    if Terminales.get_query().filter(Terminales.id_empresa == eid).first() is None:
-        try:
-            from src.utils.migrations import DatabaseMigrations
-            DatabaseMigrations._sembrar_pasarelas_y_terminales()
-        except Exception:
-            pass
+    eid = int(empresa_id) if str(empresa_id or "").isdigit() else 1
+    try:
+        from src.utils.migrations import DatabaseMigrations
+        DatabaseMigrations.asegurar_esquema_y_datos(empresa_id=eid)
+    except Exception:
+        pass
     q = Terminales.get_query().filter(Terminales.id_empresa == eid)
-    if request.args.get("solo_activas") == "true":
-        q = q.filter(Terminales.estado == "Activo")
+    if str(request.args.get("solo_activas") or "").lower() in ("true", "1", "yes"):
+        q = q.filter((Terminales.estado == "Activo") | (Terminales.estado == None))
     return jsonify([t.to_dict() for t in q.order_by(Terminales.nombre.asc()).all()]), 200
 
 

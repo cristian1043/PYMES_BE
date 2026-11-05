@@ -5,13 +5,17 @@ class MetodosPagoController:
 
     @staticmethod
     def get(empresa_id=None):
-        query = MetodosPago.get_query().filter(MetodosPago.estado == 'Activo')
-        if empresa_id:
-            # Retorna métodos base globales (id_empresa is None) MÁS los exclusivos de la empresa solicitada
-            query = query.filter((MetodosPago.id_empresa == None) | (MetodosPago.id_empresa == int(empresa_id)))
-        else:
-            # Si no se especifica empresa, solo los métodos globales estándar
-            query = query.filter(MetodosPago.id_empresa == None)
+        try:
+            from src.utils.migrations import DatabaseMigrations
+            DatabaseMigrations.asegurar_esquema_y_datos(empresa_id=empresa_id)
+        except Exception:
+            pass
+
+        query = MetodosPago.get_query().filter(
+            (MetodosPago.estado == 'Activo') | (MetodosPago.estado == None)
+        )
+        eid = int(empresa_id) if (empresa_id and str(empresa_id).isdigit()) else 1
+        query = query.filter((MetodosPago.id_empresa == None) | (MetodosPago.id_empresa == eid))
         return query.all()
 
     @staticmethod

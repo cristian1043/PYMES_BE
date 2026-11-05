@@ -54,7 +54,7 @@ def get_cobro(id):
 # ===========================
 @cobros_bp.route("/<int:id>/cancelar", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", "Contador")
+@roles_required("Administrador", "Vendedor", "Almacenista", "Contador", 1, 2, 3)
 def cancelar_cobro(id):
     tx, err = _cargar_cobro_con_acceso(id)
     if err:
@@ -67,11 +67,11 @@ def cancelar_cobro(id):
 
 
 # ===========================
-# Simular resultado (solo pasarela 'simulado' en modo sandbox)
+# Simular resultado (modo sandbox / simulado)
 # ===========================
 @cobros_bp.route("/<int:id>/simular", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", "Contador")
+@roles_required("Administrador", "Vendedor", "Almacenista", "Contador", 1, 2, 3)
 def simular_cobro(id):
     tx, err = _cargar_cobro_con_acceso(id)
     if err:

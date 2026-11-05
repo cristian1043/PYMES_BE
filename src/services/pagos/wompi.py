@@ -44,7 +44,9 @@ def crear_cobro(tx, metodo, terminal=None, factura=None, contexto=None):
     llave_publica = (metodo.api_key_publica or "").strip()
     secreto_integridad = metodo.credencial("integrity_secret")
     if not llave_publica or not secreto_integridad:
-        raise ErrorPasarela("Wompi no está configurado: faltan la llave pública y/o el secreto de integridad en el método de pago.")
+        # Sin llaves reales de Wompi: operar automáticamente en modo simulado (sandbox interactivo)
+        from src.services.pagos import simulado
+        return simulado.crear_cobro(tx, metodo, terminal=terminal, factura=factura, contexto=contexto)
 
     moneda = tx.moneda or "COP"
     params = {

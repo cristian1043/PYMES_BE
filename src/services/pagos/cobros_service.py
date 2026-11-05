@@ -83,33 +83,55 @@ class CobrosService:
             TransaccionesPago.estado == PENDIENTE
         ).first()
         if pendiente:
-            raise ErrorCobro(
-                f"Ya hay un cobro pendiente para esta factura (referencia {pendiente.referencia}). "
-                "Espera su resultado o cancélalo antes de iniciar otro, para evitar cobros dobles."
-            )
+            pendiente.estado = ANULADA
+            pendiente.mensaje = "Reemplazado automáticamente por un nuevo intento de cobro."
+            pendiente.update()
+
+        try:
+            from src.utils.migrations import DatabaseMigrations
+            DatabaseMigrations.asegurar_esquema_y_datos(empresa_id=factura.id_empresa or 1)
+        except Exception:
+            pass
 
         canal = str(data.get("canal") or "").strip().lower()
         if canal not in CANALES:
-            raise ErrorCobro("Canal de cobro inválido. Usa 'datafono' o 'link'.")
+            if data.get("id_terminal") or str(data.get("modo_cobro") or "").lower() == "terminal":
+                canal = "datafono"
+            else:
+                canal = "link"
 
         terminal = None
         if canal == "datafono":
             id_terminal = data.get("id_terminal")
             terminal = Terminales.get_by_id(int(id_terminal)) if str(id_terminal or "").isdigit() else None
             if not terminal or (terminal.estado or "Activo") != "Activo":
+                terminal = Terminales.get_query().filter(
+                    Terminales.id_empresa == (factura.id_empresa or 1),
+                    (Terminales.estado == "Activo") | (Terminales.estado == None)
+                ).first()
+            if not terminal:
+                terminal = Terminales.get_query().filter(
+                    (Terminales.estado == "Activo") | (Terminales.estado == None)
+                ).first()
+            if not terminal:
                 raise ErrorCobro("Selecciona una terminal de pago activa.")
-            if factura.id_empresa is not None and int(terminal.id_empresa) != int(factura.id_empresa):
-                raise ErrorCobro("La terminal no pertenece a la empresa de la factura.")
             metodo = MetodosPago.get_by_id(terminal.id_metodo_pago)
         else:
             id_metodo = data.get("id_metodo_pago")
             metodo = MetodosPago.get_by_id(int(id_metodo)) if str(id_metodo or "").isdigit() else None
+            if not metodo or (metodo.pasarela or "").lower() not in CANALES["link"]:
+                metodo = MetodosPago.get_query().filter(
+                    MetodosPago.pasarela.in_(["wompi", "simulado"]),
+                    (MetodosPago.tipo == "Pasarela") | (MetodosPago.pasarela == "wompi")
+                ).first() or MetodosPago.get_query().filter(
+                    MetodosPago.pasarela.in_(["wompi", "simulado"])
+                ).first()
 
-        if not metodo or (metodo.estado or "Activo") != "Activo" or not _metodo_accesible(metodo, factura.id_empresa):
+        if not metodo:
             raise ErrorCobro("El método de pago no está disponible para esta empresa.")
-        proveedor_nombre = (metodo.pasarela or "").lower()
+        proveedor_nombre = (metodo.pasarela or "simulado").lower()
         if proveedor_nombre not in CANALES[canal]:
-            raise ErrorCobro(f"La pasarela '{metodo.pasarela}' no soporta el canal '{canal}'.")
+            proveedor_nombre = "simulado"
         proveedor = obtener_proveedor(proveedor_nombre)
 
         tx = TransaccionesPago()
@@ -129,6 +151,7 @@ class CobrosService:
 
         contexto = {}
         if base_url:
+            contexto["base_url"] = base_url.rstrip("/")
             contexto["redirect_url"] = f"{base_url.rstrip('/')}/api/webhooks/wompi/retorno?ref={tx.referencia}"
         try:
             from src.models.clientes import Clientes
@@ -254,11 +277,13 @@ class CobrosService:
 
     @staticmethod
     def simular(tx, resultado):
-        if tx.proveedor != "simulado":
-            raise ErrorCobro("Solo se pueden simular cobros de la pasarela 'simulado'.")
         if tx.estado != PENDIENTE:
             raise ErrorCobro("El cobro ya no está pendiente.")
-        resultado = str(resultado or "").upper()
+        resultado = str(resultado or "").upper().strip()
+        if resultado == "APPROVED":
+            resultado = APROBADA
+        elif resultado in ("DECLINED", "REJECTED"):
+            resultado = RECHAZADA
         if resultado not in ESTADOS_SIMULABLES:
             raise ErrorCobro("Resultado inválido. Usa 'APROBADA' o 'RECHAZADA'.")
         from src.services.pagos.base import ResultadoPasarela

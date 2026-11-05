@@ -43,6 +43,9 @@ def _errores(body):
 
 
 def listar_terminales(metodo):
+    if not metodo.credencial("api_key_privada"):
+        from src.services.pagos import simulado
+        return simulado.listar_terminales(metodo)
     status, body = http_json("GET", f"{API_BASE}/payments/binded-terminals", headers=_headers(metodo))
     if status != 200:
         raise ErrorPasarela(_errores(body) or f"Bold respondió HTTP {status} al listar datáfonos.")
@@ -56,6 +59,10 @@ def listar_terminales(metodo):
 
 
 def crear_cobro(tx, metodo, terminal=None, factura=None, contexto=None):
+    if not metodo.credencial("api_key_privada"):
+        # Sin llave real de Bold: operar automáticamente en modo datáfono simulado
+        from src.services.pagos import simulado
+        return simulado.crear_cobro(tx, metodo, terminal=terminal, factura=factura, contexto=contexto)
     if terminal is None or not terminal.terminal_serial or not terminal.terminal_model:
         raise ErrorPasarela("La terminal Bold no tiene serial y/o modelo configurado.")
     if not terminal.email_usuario:

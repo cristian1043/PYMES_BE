@@ -5,6 +5,21 @@ class DatabaseMigrations:
     """
     Módulo exclusivo para la gestión y actualización del esquema de tablas en la base de datos MySQL (SRP).
     """
+    _esquema_verificado = False
+
+    @staticmethod
+    def asegurar_esquema_y_datos(empresa_id=None):
+        """Garantiza en caliente que las tablas, columnas y semillas de métodos/terminales existan."""
+        if not DatabaseMigrations._esquema_verificado:
+            DatabaseMigrations._esquema_verificado = True
+            try:
+                from src.models import Base
+                Base.metadata.create_all(bind=engine)
+            except Exception:
+                pass
+            DatabaseMigrations.ejecutar_migraciones()
+        else:
+            DatabaseMigrations._sembrar_pasarelas_y_terminales(empresa_id=empresa_id)
 
     @staticmethod
     def ejecutar_migraciones():
@@ -178,59 +193,77 @@ class DatabaseMigrations:
             pass
 
     @staticmethod
-    def _sembrar_pasarelas_y_terminales():
+    def _sembrar_pasarelas_y_terminales(empresa_id=None):
         """
         Garantiza que existan métodos de pago integrados (Bold, Wompi y modo Simulado para pruebas sin llaves)
         y terminales de pago (datáfonos) iniciales para que el comercio pueda operar de inmediato.
         No modifica ni elimina métodos ni terminales ya creados.
         """
         try:
-            from src.models import session
+            from src.models import session, Base
             from src.models.metodos_pago import MetodosPago
             from src.models.terminales import Terminales
             from src.models.empresas import Empresas
 
-            existentes = session.query(MetodosPago).all()
-            nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
+            try:
+                Base.metadata.create_all(bind=engine)
+            except Exception:
+                pass
 
-            # 1. Asegurar métodos base si la tabla está vacía
-            if not existentes:
-                base_efectivo = MetodosPago(
+            existentes = session.query(MetodosPago).all()
+            # Asegurar que todos los métodos existentes tengan estado y pasarela válidos
+            for m in existentes:
+                if not m.estado:
+                    m.estado = "Activo"
+                if not m.pasarela:
+                    m.pasarela = "ninguna"
+                if not m.modo:
+                    m.modo = "sandbox"
+            session.commit()
+
+            # 1. Asegurar método Efectivo
+            tiene_efectivo = any((m.tipo or "").lower() == "efectivo" or "efectivo" in (m.nombre or "").lower() for m in existentes)
+            if not tiene_efectivo:
+                session.add(MetodosPago(
                     nombre="Efectivo",
-                    descripcion="Pago en efectivo en caja",
+                    descripcion="Pago directo en efectivo en caja",
                     tipo="Efectivo",
                     pasarela="ninguna",
                     modo="sandbox",
                     estado="Activo",
                     id_empresa=None
-                )
-                base_transf = MetodosPago(
+                ))
+                session.commit()
+
+            # 2. Asegurar método Transferencia Bancaria / Nequi / Daviplata
+            existentes = session.query(MetodosPago).all()
+            tiene_transf = any((m.tipo or "").lower() == "transferencia" or "transferencia" in (m.nombre or "").lower() for m in existentes)
+            if not tiene_transf:
+                session.add(MetodosPago(
                     nombre="Transferencia Bancaria / Nequi",
-                    descripcion="Transferencia directa a cuenta o billetera digital",
+                    descripcion="Transferencia directa a cuenta bancaria, Nequi o Daviplata",
                     tipo="Transferencia",
-                    banco="Bancolombia / Nequi",
+                    banco="Bancolombia / Nequi / Daviplata",
                     pasarela="ninguna",
                     modo="sandbox",
                     estado="Activo",
                     id_empresa=None
-                )
-                session.add(base_efectivo)
-                session.add(base_transf)
+                ))
                 session.commit()
-                existentes = session.query(MetodosPago).all()
-                nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
 
-            # 2. Asegurar métodos integrados en modo simulado (pruebas sin llaves) y plantillas Bold / Wompi
+            # 3. Asegurar método Datáfono Bold (Simulado) para cobro con tarjeta en terminal POS
+            existentes = session.query(MetodosPago).all()
+            nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
             metodo_sim_datafono = next(
-                (m for m in existentes if (m.pasarela or "").lower() == "simulado" and (m.tipo or "") == "Tarjeta"),
+                (m for m in existentes if (m.pasarela or "").lower() in ("simulado", "bold") and (m.tipo or "") == "Tarjeta"),
                 None
             )
             if not metodo_sim_datafono and "datáfono bold (simulado)" not in nombres_lower:
                 metodo_sim_datafono = MetodosPago(
                     nombre="Datáfono Bold (Simulado)",
-                    descripcion="Cobro en terminal física en modo pruebas (sin llaves reales)",
+                    descripcion="Cobro con tarjeta débito/crédito en terminal física (modo pruebas sin llaves)",
                     tipo="Tarjeta",
-                    banco="Bold",
+                    banco="Bold POS",
                     pasarela="simulado",
                     modo="sandbox",
                     estado="Activo",
@@ -239,14 +272,17 @@ class DatabaseMigrations:
                 session.add(metodo_sim_datafono)
                 session.commit()
 
+            # 4. Asegurar método Pasarela Wompi / PSE / Nequi (Simulado) para links de pago
+            existentes = session.query(MetodosPago).all()
+            nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
             metodo_sim_link = next(
-                (m for m in existentes if (m.pasarela or "").lower() == "simulado" and (m.tipo or "") == "Pasarela"),
+                (m for m in existentes if (m.pasarela or "").lower() in ("simulado", "wompi") and (m.tipo or "") == "Pasarela"),
                 None
             )
             if not metodo_sim_link and "pasarela wompi / pse / nequi (simulado)" not in nombres_lower:
                 metodo_sim_link = MetodosPago(
                     nombre="Pasarela Wompi / PSE / Nequi (Simulado)",
-                    descripcion="Link de cobro online (PSE, Nequi, Tarjeta) en modo pruebas",
+                    descripcion="Link de cobro online (PSE, Nequi, QR Bancolombia, Tarjeta) en modo pruebas",
                     tipo="Pasarela",
                     banco="Wompi Bancolombia",
                     pasarela="simulado",
@@ -257,13 +293,15 @@ class DatabaseMigrations:
                 session.add(metodo_sim_link)
                 session.commit()
 
-            # 3. Si una empresa activa aún no tiene ninguna terminal de pago registrada, crear sus datáfonos iniciales
+            # 5. Si una empresa activa aún no tiene ninguna terminal de pago registrada, crear sus datáfonos iniciales
             metodo_para_terminal = metodo_sim_datafono or next(
                 (m for m in session.query(MetodosPago).all() if (m.pasarela or "").lower() in ("simulado", "bold")),
                 None
             )
             if metodo_para_terminal:
                 ids_empresas = [1]
+                if empresa_id and str(empresa_id).isdigit() and int(empresa_id) not in ids_empresas:
+                    ids_empresas.append(int(empresa_id))
                 try:
                     for emp in session.query(Empresas).all():
                         if emp.id and int(emp.id) not in ids_empresas:
@@ -279,7 +317,7 @@ class DatabaseMigrations:
                             nombre="Caja Principal - Datáfono 1",
                             proveedor="simulado",
                             id_metodo_pago=metodo_para_terminal.id,
-                            terminal_serial="SIM-0001",
+                            terminal_serial=f"SIM-E{eid}-001",
                             terminal_model="Bold Smart Pro",
                             email_usuario="caja1@pymesoft.co",
                             estado="Activo"
@@ -289,7 +327,7 @@ class DatabaseMigrations:
                             nombre="Caja Auxiliar - Datáfono 2",
                             proveedor="simulado",
                             id_metodo_pago=metodo_para_terminal.id,
-                            terminal_serial="SIM-0002",
+                            terminal_serial=f"SIM-E{eid}-002",
                             terminal_model="Bold Smart",
                             email_usuario="caja2@pymesoft.co",
                             estado="Activo"

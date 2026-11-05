@@ -59,23 +59,41 @@ class TransaccionesPago(Base):
 
     def to_dict(self):
         fmt = '%Y-%m-%d %H:%M:%S'
+        terminal_nombre = None
+        if self.id_terminal:
+            try:
+                from src.models.terminales import Terminales
+                t = Terminales.get_by_id(self.id_terminal)
+                if t:
+                    terminal_nombre = t.nombre
+            except Exception:
+                pass
+        es_simulado = (
+            self.proveedor == 'simulado'
+            or str(self.id_externo or '').startswith('SIM-')
+            or '/simulado/' in str(self.url_pago or '')
+        )
         return {
             "id": self.id,
             "id_factura": self.id_factura,
             "id_empresa": self.id_empresa,
             "id_terminal": self.id_terminal,
+            "terminal_nombre": terminal_nombre,
             "id_metodo_pago": self.id_metodo_pago,
             "canal": self.canal,
             "proveedor": self.proveedor,
+            "pasarela": self.proveedor,
             "referencia": self.referencia,
+            "referencia_interna": self.referencia,
             "id_externo": self.id_externo,
             "monto": self.monto,
             "monto_centavos": self.monto_centavos,
             "moneda": self.moneda or "COP",
             "estado": self.estado,
             "url_pago": self.url_pago,
+            "url_checkout": self.url_pago,
             "mensaje": self.mensaje,
-            "simulado": self.proveedor == 'simulado',
+            "simulado": es_simulado,
             "created_at": self.created_at.strftime(fmt) if self.created_at else None,
             "updated_at": self.updated_at.strftime(fmt) if self.updated_at else None
         }
