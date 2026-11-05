@@ -37,3 +37,5 @@ from src.models.detalle_facturas import DetalleFacturas
 from src.models.compras import Compras
 from src.models.detalle_compras import DetalleCompras
 from src.models.movimiento_inventario import MovimientosInventario
+from src.models.terminales import Terminales
+from src.models.transacciones_pago import TransaccionesPago

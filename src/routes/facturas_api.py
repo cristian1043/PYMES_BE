@@ -7,6 +7,28 @@ from src.utils.security import roles_required, tenant_required
 
 facturas_bp = Blueprint("facturas", __name__)
 
+def _resolver_empresa_id(data=None):
+    """Resuelve id_empresa desde body JSON, header X-Empresa-ID, query params, entorno tenant o JWT."""
+    emp_id = None
+    if isinstance(data, dict):
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+    if not emp_id:
+        emp_id = (
+            request.headers.get("X-Empresa-ID")
+            or request.args.get("empresa_id")
+            or request.args.get("id_empresa")
+            or request.environ.get("tenant_empresa_id")
+        )
+    if not emp_id:
+        try:
+            claims = get_jwt() or {}
+            empresas_jwt = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
+            if empresas_jwt:
+                emp_id = empresas_jwt[0]
+        except Exception:
+            pass
+    return emp_id
+
 def validar_acceso_factura(factura_id, claims):
     """Verifica que el usuario tenga acceso a la empresa de la factura solicitada."""
     rol_usuario = claims.get("rol", "")
@@ -32,7 +54,7 @@ def validar_acceso_factura(factura_id, claims):
 @tenant_required(allow_global_admin=True)
 def get_facturas():
     page, per_page = get_pagination_params()
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     resultado = FacturasController.get_paginated(page, per_page, empresa_id=empresa_id)
     return jsonify(resultado), 200
 
@@ -42,7 +64,7 @@ def get_facturas():
 @facturas_bp.route("/siguiente_numero", methods=["GET"])
 @jwt_required()
 def get_siguiente_numero():
-    emp_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    emp_id = _resolver_empresa_id()
     num = FacturasController.obtener_siguiente_numero(empresa_id=emp_id)
     return jsonify({"siguiente_numero": num}), 200
 
@@ -70,10 +92,14 @@ def get_factura(id):
 # ===========================
 @facturas_bp.route("/", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", "Contador")
+@roles_required("Administrador", "Vendedor", "Almacenista", "Contador", 1, 2, 3)
 @tenant_required(allow_global_admin=True)
 def create_factura():
     data = request.get_json() or {}
+    emp_id = _resolver_empresa_id(data)
+    if emp_id and not data.get("id_empresa"):
+        data["id_empresa"] = emp_id
+
     identity = get_jwt_identity()
     if identity and not data.get("id_usuario"):
         try:
@@ -94,7 +120,7 @@ def create_factura():
 # ===========================
 @facturas_bp.route("/<int:id>", methods=["PUT"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", "Contador")
+@roles_required("Administrador", "Vendedor", "Almacenista", "Contador", 1, 2, 3)
 def update_factura(id):
     claims = get_jwt() or {}
     permitido, err_res, *code = validar_acceso_factura(id, claims)
@@ -112,7 +138,7 @@ def update_factura(id):
 # ===========================
 @facturas_bp.route("/<int:id>/cancelar", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor")
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def cancelar_factura(id):
     claims = get_jwt() or {}
     permitido, err_res, *code = validar_acceso_factura(id, claims)
@@ -142,11 +168,11 @@ def delete_factura(id):
     return jsonify({"mensaje": "Factura no encontrada"}), 404
 
 # ===========================
-# Registrar Pago de Pasarela
+# Registrar pago manual (métodos SIN pasarela integrada: efectivo, transferencia, datáfono no integrado...)
 # ===========================
 @facturas_bp.route("/<int:id>/pagar", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", "Contador")
+@roles_required("Administrador", "Vendedor", "Almacenista", "Contador", 1, 2, 3)
 def pagar_factura(id):
     claims = get_jwt() or {}
     permitido, err_res, *code = validar_acceso_factura(id, claims)
@@ -154,14 +180,54 @@ def pagar_factura(id):
         return err_res, (code[0] if code else 403)
 
     data = request.get_json() or {}
-    pasarela = data.get("pasarela", "wompi")
+    pasarela = data.get("pasarela", "manual")
     referencia = data.get("referencia_pago") or data.get("referencia")
     id_metodo = data.get("id_metodo_pago")
 
-    factura = FacturasController.registrar_pago_pasarela(id, pasarela=pasarela, referencia_pago=referencia, id_metodo_pago=id_metodo)
+    try:
+        factura = FacturasController.registrar_pago_pasarela(id, pasarela=pasarela, referencia_pago=referencia, id_metodo_pago=id_metodo)
+    except ValueError as ve:
+        return jsonify({"mensaje": str(ve)}), 400
     if factura:
         return jsonify({
             "mensaje": "Pago procesado y liquidado con éxito",
             "factura": factura.to_dict()
         }), 200
     return jsonify({"mensaje": "Factura no encontrada"}), 404
+
+# ===========================
+# Cobros con pasarela / terminal integrada (Bold datáfono, Wompi link, Simulado)
+# ===========================
+@facturas_bp.route("/<int:id>/cobros", methods=["POST"])
+@jwt_required()
+@roles_required("Administrador", "Vendedor", "Almacenista", "Contador", 1, 2, 3)
+def crear_cobro_factura(id):
+    claims = get_jwt() or {}
+    permitido, err_res, *code = validar_acceso_factura(id, claims)
+    if not permitido:
+        return err_res, (code[0] if code else 403)
+
+    from src.services.pagos.cobros_service import CobrosService, ErrorCobro
+    from src.routes.cobros_api import url_publica_base
+    data = request.get_json() or {}
+    id_usuario = None
+    try:
+        id_usuario = int(get_jwt_identity())
+    except (ValueError, TypeError):
+        pass
+    try:
+        tx, factura = CobrosService.crear_cobro(id, data, id_usuario=id_usuario, base_url=url_publica_base())
+    except ErrorCobro as ec:
+        return jsonify({"mensaje": str(ec)}), 400
+    return jsonify({"cobro": tx.to_dict(), "factura": factura.to_dict()}), 201
+
+@facturas_bp.route("/<int:id>/cobros", methods=["GET"])
+@jwt_required()
+def listar_cobros_factura(id):
+    claims = get_jwt() or {}
+    permitido, err_res, *code = validar_acceso_factura(id, claims)
+    if not permitido:
+        return err_res, (code[0] if code else 403)
+
+    from src.services.pagos.cobros_service import CobrosService
+    return jsonify([tx.to_dict() for tx in CobrosService.listar_por_factura(id)]), 200

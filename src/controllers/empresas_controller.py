@@ -1,3 +1,4 @@
+from src.models import session
 from src.models.empresas import Empresas
 
 class EmpresasController:

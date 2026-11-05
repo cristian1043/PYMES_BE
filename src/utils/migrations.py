@@ -119,6 +119,39 @@ class DatabaseMigrations:
                     except Exception:
                         pass
 
+                # Columnas de integración con pasarelas para la tabla metodos_pago
+                # (bases de datos creadas antes de que existieran estos campos)
+                columnas_metodos_pago = [
+                    "ALTER TABLE metodos_pago ADD COLUMN pasarela VARCHAR(50) DEFAULT 'ninguna'",
+                    "ALTER TABLE metodos_pago ADD COLUMN api_key_publica VARCHAR(255)",
+                    "ALTER TABLE metodos_pago ADD COLUMN api_key_privada VARCHAR(255)",
+                    "ALTER TABLE metodos_pago ADD COLUMN webhook_secret VARCHAR(255)",
+                    "ALTER TABLE metodos_pago ADD COLUMN integrity_secret VARCHAR(255)",
+                    "ALTER TABLE metodos_pago ADD COLUMN modo VARCHAR(20) DEFAULT 'sandbox'"
+                ]
+                for query in columnas_metodos_pago:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+                # Seguridad PCI-DSS: eliminar cualquier dato de tarjeta almacenado en clientes.
+                # Las columnas se conservan (sin uso) para no romper bases de datos existentes,
+                # pero su contenido se borra y la API ya no las lee ni las escribe.
+                try:
+                    conn.execute(text(
+                        "UPDATE clientes SET numero_tarjeta = NULL, cvc_tarjeta = NULL, fecha_expiracion = NULL, "
+                        "titular_tarjeta = NULL, ultimos_digitos_tarjeta = NULL, franquicia_tarjeta = NULL, "
+                        "banco_tarjeta = NULL, tipo_tarjeta = NULL, tiene_tarjeta = 'No' "
+                        "WHERE numero_tarjeta IS NOT NULL OR cvc_tarjeta IS NOT NULL OR fecha_expiracion IS NOT NULL "
+                        "OR titular_tarjeta IS NOT NULL OR ultimos_digitos_tarjeta IS NOT NULL OR franquicia_tarjeta IS NOT NULL "
+                        "OR banco_tarjeta IS NOT NULL OR tipo_tarjeta IS NOT NULL OR (tiene_tarjeta IS NOT NULL AND tiene_tarjeta <> 'No')"
+                    ))
+                    conn.commit()
+                except Exception:
+                    pass
+
                 # Reparación y saneamiento automático de registros huérfanos sin id_empresa
                 reparaciones = [
                     "UPDATE clientes SET id_empresa = 1 WHERE id_empresa IS NULL",
@@ -133,5 +166,136 @@ class DatabaseMigrations:
                         conn.commit()
                     except Exception:
                         pass
+
+            # Semilla automática e idempotente de métodos de pago integrados y terminales de pago iniciales
+            DatabaseMigrations._sembrar_pasarelas_y_terminales()
         except Exception:
             pass
+
+    @staticmethod
+    def _sembrar_pasarelas_y_terminales():
+        """
+        Garantiza que existan métodos de pago integrados (Bold, Wompi y modo Simulado para pruebas sin llaves)
+        y terminales de pago (datáfonos) iniciales para que el comercio pueda operar de inmediato.
+        No modifica ni elimina métodos ni terminales ya creados.
+        """
+        try:
+            from src.models import session
+            from src.models.metodos_pago import MetodosPago
+            from src.models.terminales import Terminales
+            from src.models.empresas import Empresas
+
+            existentes = session.query(MetodosPago).all()
+            nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
+
+            # 1. Asegurar métodos base si la tabla está vacía
+            if not existentes:
+                base_efectivo = MetodosPago(
+                    nombre="Efectivo",
+                    descripcion="Pago en efectivo en caja",
+                    tipo="Efectivo",
+                    pasarela="ninguna",
+                    modo="sandbox",
+                    estado="Activo",
+                    id_empresa=None
+                )
+                base_transf = MetodosPago(
+                    nombre="Transferencia Bancaria / Nequi",
+                    descripcion="Transferencia directa a cuenta o billetera digital",
+                    tipo="Transferencia",
+                    banco="Bancolombia / Nequi",
+                    pasarela="ninguna",
+                    modo="sandbox",
+                    estado="Activo",
+                    id_empresa=None
+                )
+                session.add(base_efectivo)
+                session.add(base_transf)
+                session.commit()
+                existentes = session.query(MetodosPago).all()
+                nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
+
+            # 2. Asegurar métodos integrados en modo simulado (pruebas sin llaves) y plantillas Bold / Wompi
+            metodo_sim_datafono = next(
+                (m for m in existentes if (m.pasarela or "").lower() == "simulado" and (m.tipo or "") == "Tarjeta"),
+                None
+            )
+            if not metodo_sim_datafono and "datáfono bold (simulado)" not in nombres_lower:
+                metodo_sim_datafono = MetodosPago(
+                    nombre="Datáfono Bold (Simulado)",
+                    descripcion="Cobro en terminal física en modo pruebas (sin llaves reales)",
+                    tipo="Tarjeta",
+                    banco="Bold",
+                    pasarela="simulado",
+                    modo="sandbox",
+                    estado="Activo",
+                    id_empresa=None
+                )
+                session.add(metodo_sim_datafono)
+                session.commit()
+
+            metodo_sim_link = next(
+                (m for m in existentes if (m.pasarela or "").lower() == "simulado" and (m.tipo or "") == "Pasarela"),
+                None
+            )
+            if not metodo_sim_link and "pasarela wompi / pse / nequi (simulado)" not in nombres_lower:
+                metodo_sim_link = MetodosPago(
+                    nombre="Pasarela Wompi / PSE / Nequi (Simulado)",
+                    descripcion="Link de cobro online (PSE, Nequi, Tarjeta) en modo pruebas",
+                    tipo="Pasarela",
+                    banco="Wompi Bancolombia",
+                    pasarela="simulado",
+                    modo="sandbox",
+                    estado="Activo",
+                    id_empresa=None
+                )
+                session.add(metodo_sim_link)
+                session.commit()
+
+            # 3. Si una empresa activa aún no tiene ninguna terminal de pago registrada, crear sus datáfonos iniciales
+            metodo_para_terminal = metodo_sim_datafono or next(
+                (m for m in session.query(MetodosPago).all() if (m.pasarela or "").lower() in ("simulado", "bold")),
+                None
+            )
+            if metodo_para_terminal:
+                ids_empresas = [1]
+                try:
+                    for emp in session.query(Empresas).all():
+                        if emp.id and int(emp.id) not in ids_empresas:
+                            ids_empresas.append(int(emp.id))
+                except Exception:
+                    pass
+
+                for eid in ids_empresas:
+                    tiene_terminales = session.query(Terminales).filter(Terminales.id_empresa == eid).first() is not None
+                    if not tiene_terminales:
+                        t1 = Terminales(
+                            id_empresa=eid,
+                            nombre="Caja Principal - Datáfono 1",
+                            proveedor="simulado",
+                            id_metodo_pago=metodo_para_terminal.id,
+                            terminal_serial="SIM-0001",
+                            terminal_model="Bold Smart Pro",
+                            email_usuario="caja1@pymesoft.co",
+                            estado="Activo"
+                        )
+                        t2 = Terminales(
+                            id_empresa=eid,
+                            nombre="Caja Auxiliar - Datáfono 2",
+                            proveedor="simulado",
+                            id_metodo_pago=metodo_para_terminal.id,
+                            terminal_serial="SIM-0002",
+                            terminal_model="Bold Smart",
+                            email_usuario="caja2@pymesoft.co",
+                            estado="Activo"
+                        )
+                        session.add(t1)
+                        session.add(t2)
+                session.commit()
+        except Exception as e:
+            try:
+                from src.models import session
+                session.rollback()
+            except Exception:
+                pass
+            print(f"[migrations] Aviso al sembrar pasarelas/terminales: {e}")

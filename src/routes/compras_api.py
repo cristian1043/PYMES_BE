@@ -7,6 +7,28 @@ from src.utils.security import roles_required, tenant_required
 
 compras_bp = Blueprint("compras", __name__)
 
+def _resolver_empresa_id(data=None):
+    """Resuelve id_empresa desde body JSON, header X-Empresa-ID, query params, entorno tenant o JWT."""
+    emp_id = None
+    if isinstance(data, dict):
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+    if not emp_id:
+        emp_id = (
+            request.headers.get("X-Empresa-ID")
+            or request.args.get("empresa_id")
+            or request.args.get("id_empresa")
+            or request.environ.get("tenant_empresa_id")
+        )
+    if not emp_id:
+        try:
+            claims = get_jwt() or {}
+            empresas_jwt = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
+            if empresas_jwt:
+                emp_id = empresas_jwt[0]
+        except Exception:
+            pass
+    return emp_id
+
 def validar_acceso_compra(compra_id, claims):
     """Verifica que el usuario tenga acceso a la empresa de la orden de compra solicitada."""
     rol_usuario = claims.get("rol", "")
@@ -29,11 +51,11 @@ def validar_acceso_compra(compra_id, claims):
 # ===========================
 @compras_bp.route("/", methods=["GET"])
 @jwt_required()
-@roles_required("Administrador", "Almacenista", 1, 3)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 @tenant_required(allow_global_admin=True)
 def get_compras():
     page, per_page = get_pagination_params()
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     resultado = ComprasController.get_paginated(page, per_page, empresa_id=empresa_id)
     return jsonify(resultado), 200
 
@@ -43,7 +65,7 @@ def get_compras():
 @compras_bp.route("/siguiente_numero", methods=["GET"])
 @jwt_required()
 def get_siguiente_numero():
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     numero = ComprasController.obtener_siguiente_numero(empresa_id=empresa_id)
     return jsonify({"siguiente_numero": numero}), 200
 
@@ -52,7 +74,7 @@ def get_siguiente_numero():
 # ===========================
 @compras_bp.route("/<int:id>/cancelar", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Almacenista", 1, 3)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def cancelar_compra(id):
     claims = get_jwt() or {}
     permitido, err_res, *code = validar_acceso_compra(id, claims)
@@ -69,7 +91,7 @@ def cancelar_compra(id):
 # ===========================
 @compras_bp.route("/<int:id>", methods=["GET"])
 @jwt_required()
-@roles_required("Administrador", "Almacenista", 1, 3)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def get_compra(id):
     claims = get_jwt() or {}
     permitido, err_res, *code = validar_acceso_compra(id, claims)
@@ -89,10 +111,14 @@ def get_compra(id):
 # ===========================
 @compras_bp.route("/", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Almacenista", 1, 3)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 @tenant_required(allow_global_admin=True)
 def create_compra():
     data = request.get_json() or {}
+    emp_id = _resolver_empresa_id(data)
+    if emp_id and not data.get("id_empresa"):
+        data["id_empresa"] = emp_id
+
     identity = get_jwt_identity()
     if identity and not data.get("id_usuario"):
         try:
@@ -113,7 +139,7 @@ def create_compra():
 # ===========================
 @compras_bp.route("/<int:id>", methods=["PUT"])
 @jwt_required()
-@roles_required("Administrador", "Almacenista", 1, 3)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def update_compra(id):
     claims = get_jwt() or {}
     permitido, err_res, *code = validar_acceso_compra(id, claims)
@@ -141,4 +167,4 @@ def delete_compra(id):
     eliminado = ComprasController.delete(id)
     if eliminado:
         return jsonify({"mensaje": "Compra eliminada correctamente"}), 200
-    return jsonify({"mensaje": "Compra no encontrada"}), 404 
+    return jsonify({"mensaje": "Compra no encontrada"}), 404

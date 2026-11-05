@@ -36,11 +36,12 @@ class MetodosPagoController:
         metodo.id_empresa = int(emp_id) if emp_id else None
         metodo.estado = data.get("estado", "Activo")
         
-        # Parámetros de pasarela de pago (Wompi, MercadoPago, Stripe, Bold, etc.)
-        metodo.pasarela = data.get("pasarela", "ninguna")
+        # Parámetros de pasarela de pago (Wompi, Bold, Simulado, etc.)
+        metodo.pasarela = str(data.get("pasarela") or "ninguna").strip().lower()
         metodo.api_key_publica = data.get("api_key_publica")
-        metodo.api_key_privada = data.get("api_key_privada")
-        metodo.webhook_secret = data.get("webhook_secret")
+        metodo.set_credencial("api_key_privada", data.get("api_key_privada"))
+        metodo.set_credencial("webhook_secret", data.get("webhook_secret"))
+        metodo.set_credencial("integrity_secret", data.get("integrity_secret"))
         metodo.modo = data.get("modo", "sandbox")
 
         metodo.create()
@@ -67,15 +68,17 @@ class MetodosPagoController:
         if "estado" in data:
             metodo.estado = data["estado"]
             
-        # Actualización de pasarela
+        # Actualización de pasarela (los secretos vacíos conservan el valor anterior)
         if "pasarela" in data:
-            metodo.pasarela = data["pasarela"]
+            metodo.pasarela = str(data["pasarela"] or "ninguna").strip().lower()
         if "api_key_publica" in data:
             metodo.api_key_publica = data["api_key_publica"]
         if "api_key_privada" in data and data["api_key_privada"]:
-            metodo.api_key_privada = data["api_key_privada"]
+            metodo.set_credencial("api_key_privada", data["api_key_privada"])
         if "webhook_secret" in data and data["webhook_secret"]:
-            metodo.webhook_secret = data["webhook_secret"]
+            metodo.set_credencial("webhook_secret", data["webhook_secret"])
+        if "integrity_secret" in data and data["integrity_secret"]:
+            metodo.set_credencial("integrity_secret", data["integrity_secret"])
         if "modo" in data:
             metodo.modo = data["modo"]
 

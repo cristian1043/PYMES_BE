@@ -100,7 +100,16 @@ class ComprasController:
 
         emp_id = data.get("id_empresa") or data.get("empresa_id")
         if not emp_id:
-            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para registrar la compra.")
+            id_prov_cand = data.get("id_proveedor")
+            if id_prov_cand:
+                try:
+                    prov_obj = Proveedores.get_by_id(int(id_prov_cand))
+                    if prov_obj and getattr(prov_obj, "id_empresa", None):
+                        emp_id = prov_obj.id_empresa
+                except Exception:
+                    pass
+        if not emp_id:
+            emp_id = 1
         id_empresa_val = int(emp_id)
 
         num = data.get("numero")

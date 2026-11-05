@@ -103,7 +103,16 @@ class FacturasController:
         # Resolver o autovincular empresa primero para el consecutivo
         emp_id = data.get("id_empresa") or data.get("empresa_id")
         if not emp_id:
-            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para emitir la factura.")
+            id_cli_cand = data.get("id_cliente") or data.get("cliente_id")
+            if id_cli_cand:
+                try:
+                    cli_obj = Clientes.get_by_id(int(id_cli_cand))
+                    if cli_obj and getattr(cli_obj, "id_empresa", None):
+                        emp_id = cli_obj.id_empresa
+                except Exception:
+                    pass
+        if not emp_id:
+            emp_id = 1
         id_empresa_val = int(emp_id)
 
         numero = data.get("numero")
@@ -255,7 +264,8 @@ class FacturasController:
         factura.subtotal = subtotal
         factura.iva = iva
         factura.descuento = descuento
-        factura.total = data.get("total", total)
+        # El total siempre se calcula en el servidor (no se confía en el valor enviado por el cliente)
+        factura.total = total
         factura.estado = data.get("estado", "Emitida")
         factura.id_cliente = int(id_cliente)
         factura.id_usuario = int(data.get("id_usuario") or 1)
@@ -263,6 +273,15 @@ class FacturasController:
         factura.id_empresa = id_empresa_val
         factura.pasarela = data.get("pasarela")
         factura.referencia_pago = data.get("referencia_pago")
+
+        # Métodos con pasarela integrada (Bold / Wompi / Simulado): la factura nace 'Emitida' y solo
+        # pasa a 'Pagada' cuando la pasarela confirma el cobro (ver src/services/pagos).
+        metodo_sel = MetodosPago.get_by_id(factura.id_metodo_pago)
+        if metodo_sel is not None and metodo_sel.integrado:
+            if factura.estado == "Pagada":
+                factura.estado = "Emitida"
+            factura.pasarela = None
+            factura.referencia_pago = None
         
         factura.create()
 
@@ -308,30 +327,46 @@ class FacturasController:
         factura.numero = data.get("numero", factura.numero)
         if "fecha" in data:
             factura.fecha = data["fecha"]
+
+        # Con pasarela integrada, el estado 'Pagada', la pasarela y la referencia solo los fija la confirmación del cobro
+        metodo_destino = MetodosPago.get_by_id(int(data.get("id_metodo_pago", factura.id_metodo_pago)))
+        protegido = metodo_destino is not None and metodo_destino.integrado
+        if protegido:
+            from src.services.pagos.cobros_service import CobrosService
+            protegido = not CobrosService.pago_confirmado(factura.id)
+
         if "estado" in data:
-            factura.estado = data["estado"]
+            if not (protegido and data["estado"] == "Pagada"):
+                factura.estado = data["estado"]
         factura.subtotal = subtotal
         factura.iva = iva
         factura.descuento = descuento
-        factura.total = data.get("total", total)
+        factura.total = total
         factura.id_cliente = int(data.get("id_cliente", factura.id_cliente))
         factura.id_usuario = int(data.get("id_usuario", factura.id_usuario))
         factura.id_metodo_pago = int(data.get("id_metodo_pago", factura.id_metodo_pago))
-        if "pasarela" in data:
+        if "pasarela" in data and not protegido:
             factura.pasarela = data["pasarela"]
-        if "referencia_pago" in data:
+        if "referencia_pago" in data and not protegido:
             factura.referencia_pago = data["referencia_pago"]
         
         factura.update()
         return factura
 
     @staticmethod
-    def registrar_pago_pasarela(id, pasarela="wompi", referencia_pago=None, id_metodo_pago=None):
+    def registrar_pago_pasarela(id, pasarela="manual", referencia_pago=None, id_metodo_pago=None):
+        """Registro manual de pago (efectivo, transferencia, datáfono no integrado, etc.)."""
         factura = Facturas.get_by_id(id)
         if not factura:
             return None
+        metodo = MetodosPago.get_by_id(int(id_metodo_pago or factura.id_metodo_pago))
+        if metodo is not None and metodo.integrado:
+            raise ValueError(
+                "Este método de pago tiene pasarela integrada: el pago debe iniciarse con "
+                "POST /api/facturas/<id>/cobros y se confirma automáticamente."
+            )
         factura.estado = "Pagada"
-        factura.pasarela = str(pasarela or "wompi")
+        factura.pasarela = str(pasarela or "manual")
         factura.referencia_pago = str(referencia_pago or f"TXN-{int(datetime.now().timestamp())}")
         if id_metodo_pago:
             factura.id_metodo_pago = int(id_metodo_pago)

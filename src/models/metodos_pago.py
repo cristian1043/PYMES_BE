@@ -15,11 +15,29 @@ class MetodosPago(Base):
     estado = Column(String(20), default='Activo')   # Activo, Inactivo
     
     # Integración con Pasarelas de Pago
-    pasarela = Column(String(50), default='ninguna') # 'ninguna', 'wompi', 'mercadopago', 'stripe', 'bold', 'payu', 'epayco'
+    pasarela = Column(String(50), default='ninguna') # 'ninguna', 'wompi', 'bold', 'simulado' (integradas) | 'mercadopago', 'stripe', 'payu', 'epayco' (aún sin integrar)
     api_key_publica = Column(String(255), nullable=True) # Public Key / Client ID expuesta para frontend
-    api_key_privada = Column(String(255), nullable=True) # Secret Key / Token privado para backend
-    webhook_secret = Column(String(255), nullable=True)  # Secreto para webhook
+    api_key_privada = Column(String(255), nullable=True) # Secret Key / Token privado para backend (Wompi prv_ / Bold llave de identidad). Puede ir cifrada ("enc:")
+    webhook_secret = Column(String(255), nullable=True)  # Secreto para webhook (Wompi secreto de eventos / Bold llave secreta). Puede ir cifrado
+    integrity_secret = Column(String(255), nullable=True) # Wompi: secreto de integridad para firmar el checkout. Puede ir cifrado
     modo = Column(String(20), default='sandbox')         # 'sandbox' (pruebas), 'produccion'
+
+    # Pasarelas con integración real implementada en src/services/pagos
+    PASARELAS_INTEGRADAS = ('wompi', 'bold', 'simulado')
+
+    @property
+    def integrado(self):
+        return (self.pasarela or 'ninguna').lower() in MetodosPago.PASARELAS_INTEGRADAS
+
+    def credencial(self, campo):
+        """Devuelve el valor descifrado de un secreto: 'api_key_privada', 'webhook_secret' o 'integrity_secret'."""
+        from src.utils.cifrado import descifrar
+        return descifrar(getattr(self, campo, None))
+
+    def set_credencial(self, campo, valor):
+        """Guarda un secreto (cifrado si PAGOS_ENC_KEY está configurada)."""
+        from src.utils.cifrado import cifrar
+        setattr(self, campo, cifrar(valor))
 
     def save(self):
         session.add(self)
@@ -63,9 +81,13 @@ class MetodosPago(Base):
             "pasarela": self.pasarela or "ninguna",
             "api_key_publica": self.api_key_publica,
             "modo": self.modo or "sandbox",
-            "tiene_llave_privada": bool(self.api_key_privada)
+            "tiene_llave_privada": bool(self.api_key_privada),
+            "tiene_webhook_secret": bool(self.webhook_secret),
+            "tiene_integrity_secret": bool(getattr(self, "integrity_secret", None)),
+            "integrado": self.integrado
         }
         if incluir_privadas:
-            d["api_key_privada"] = self.api_key_privada
-            d["webhook_secret"] = self.webhook_secret
+            d["api_key_privada"] = self.credencial("api_key_privada")
+            d["webhook_secret"] = self.credencial("webhook_secret")
+            d["integrity_secret"] = self.credencial("integrity_secret")
         return d

@@ -26,6 +26,8 @@ from src.models.compras import Compras
 from src.models.detalle_compras import DetalleCompras
 from src.models.empresas import Empresas
 from src.models.usuario_empresas import UsuarioEmpresas
+from src.models.terminales import Terminales
+from src.models.transacciones_pago import TransaccionesPago
 
 # Crear todas las tablas y ejecutar migraciones en la base de datos
 Base.metadata.create_all(bind=engine)
@@ -102,7 +104,10 @@ from src.routes import (
     metodos_pago_bp,
     reportes_bp,
     empresas_bp,
-    usuario_empresas_bp
+    usuario_empresas_bp,
+    terminales_bp,
+    cobros_bp,
+    webhooks_bp
 )
 
 # Aplicar Rate Limit a login contra ataques de Fuerza Bruta (máx 10 intentos/minuto por IP)
@@ -124,6 +129,9 @@ app.register_blueprint(metodos_pago_bp, url_prefix="/api/metodos_pago")
 app.register_blueprint(reportes_bp, url_prefix="/api/reportes")
 app.register_blueprint(empresas_bp, url_prefix="/api/empresas")
 app.register_blueprint(usuario_empresas_bp, url_prefix="/api/usuario_empresas")
+app.register_blueprint(terminales_bp, url_prefix="/api/terminales")
+app.register_blueprint(cobros_bp, url_prefix="/api/cobros")
+app.register_blueprint(webhooks_bp, url_prefix="/api/webhooks")
 
 @app.errorhandler(429)
 def ratelimit_handler(e):
@@ -145,4 +153,4 @@ def handle_500_error(e):
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)

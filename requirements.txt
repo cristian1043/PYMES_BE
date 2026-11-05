@@ -4,3 +4,4 @@ Flask-CORS>=4.0.0
 Flask-Limiter>=3.5.0
 SQLAlchemy>=2.0.0
 Werkzeug>=3.0.0
+cryptography>=42.0.0

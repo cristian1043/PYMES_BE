@@ -16,6 +16,9 @@ class Clientes(Base):
     email = Column(String(255), unique=True, nullable=False)
     estado = Column(String(20), default='Activo', nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow) 
+    # OBSOLETO (PCI-DSS): columnas de tarjeta conservadas solo por compatibilidad con bases de datos existentes.
+    # Su contenido se borra en src/utils/migrations.py y la API ya no las lee, escribe ni devuelve.
+    # Los cobros con tarjeta se hacen en el datáfono (Bold) o en el checkout de la pasarela (Wompi).
     tiene_tarjeta = Column(String(5), default='No')
     tipo_tarjeta = Column(String(50))
     banco_tarjeta = Column(String(100))
@@ -87,11 +90,5 @@ class Clientes(Base):
             "email": self.email,
             "estado": getattr(self, "estado", "Activo") or "Activo",
             "created_at": self.created_at,
-            "tiene_tarjeta": self.tiene_tarjeta or 'No',
-            "tipo_tarjeta": self.tipo_tarjeta,
-            "banco_tarjeta": self.banco_tarjeta,
-            "franquicia_tarjeta": self.franquicia_tarjeta,
-            "ultimos_digitos_tarjeta": self.ultimos_digitos_tarjeta,
-            "titular_tarjeta": self.titular_tarjeta,
             "id_empresa": getattr(self, "id_empresa", None)
         }

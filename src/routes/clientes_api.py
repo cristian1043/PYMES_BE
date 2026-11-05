@@ -60,7 +60,7 @@ def get_cliente(id):
 # ===========================
 @clientes_bp.route("/", methods=["POST"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", 1, 2)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 @tenant_required(allow_global_admin=True)
 def create_cliente():
     data = request.get_json() or {}
@@ -69,7 +69,7 @@ def create_cliente():
             request.headers.get("X-Empresa-ID") or 
             request.args.get("empresa_id") or 
             request.args.get("id_empresa") or 
-            request.environ.get('tenant_empresa_id')
+            request.environ.get('tenant_empresa_id') or 1
         )
         if emp_id:
             data["id_empresa"] = emp_id
@@ -81,7 +81,7 @@ def create_cliente():
 # ===========================
 @clientes_bp.route("/<int:id>", methods=["PUT"])
 @jwt_required()
-@roles_required("Administrador", "Vendedor", 1, 2)
+@roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def update_cliente(id):
     data = request.get_json() or {}
     cliente = ClientesController.update(id, data)

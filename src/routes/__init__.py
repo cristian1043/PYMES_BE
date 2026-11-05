@@ -13,3 +13,6 @@ from .reportes_api import reportes_bp
 from .empresas_api import empresas_bp
 from .usuario_empresas_api import usuario_empresas_bp
 from .auth_api import auth_bp
+from .terminales_api import terminales_bp
+from .cobros_api import cobros_bp
+from .webhooks_api import webhooks_bp

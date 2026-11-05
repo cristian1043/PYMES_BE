@@ -79,17 +79,8 @@ class ClientesController:
             count = session.query(Clientes).filter(Clientes.id_empresa == eid).count()
             cliente.codigo = f"CLI-E{eid}-{count + 1:03d}"
         
-        cliente.tiene_tarjeta = data.get("tiene_tarjeta", "No")
-        cliente.tipo_tarjeta = data.get("tipo_tarjeta")
-        cliente.banco_tarjeta = data.get("banco_tarjeta")
-        cliente.franquicia_tarjeta = data.get("franquicia_tarjeta")
-        # Por seguridad PCI-DSS, nunca guardar número completo ni CVC. Extraer únicamente últimos 4 dígitos.
-        raw_card = str(data.get("numero_tarjeta") or data.get("ultimos_digitos_tarjeta") or "").strip()
-        cliente.ultimos_digitos_tarjeta = raw_card[-4:] if len(raw_card) >= 4 else raw_card
-        cliente.numero_tarjeta = None
-        cliente.titular_tarjeta = data.get("titular_tarjeta")
-        cliente.fecha_expiracion = None
-        cliente.cvc_tarjeta = None
+        # Por seguridad PCI-DSS ya no se almacena ningún dato de tarjeta del cliente
+        # (cualquier campo de tarjeta recibido en la petición se ignora).
 
         from datetime import datetime
         try:
@@ -120,22 +111,8 @@ class ClientesController:
         if "estado" in data:
             cliente.estado = data["estado"]
         
-        if "tiene_tarjeta" in data:
-            cliente.tiene_tarjeta = data["tiene_tarjeta"]
-        if "tipo_tarjeta" in data:
-            cliente.tipo_tarjeta = data["tipo_tarjeta"]
-        if "banco_tarjeta" in data:
-            cliente.banco_tarjeta = data["banco_tarjeta"]
-        if "franquicia_tarjeta" in data:
-            cliente.franquicia_tarjeta = data["franquicia_tarjeta"]
-        if "ultimos_digitos_tarjeta" in data or "numero_tarjeta" in data:
-            raw_c = str(data.get("numero_tarjeta") or data.get("ultimos_digitos_tarjeta") or "").strip()
-            cliente.ultimos_digitos_tarjeta = raw_c[-4:] if len(raw_c) >= 4 else raw_c
-            cliente.numero_tarjeta = None
-        if "titular_tarjeta" in data:
-            cliente.titular_tarjeta = data["titular_tarjeta"]
-        cliente.cvc_tarjeta = None
-        cliente.fecha_expiracion = None
+        # Por seguridad PCI-DSS ya no se almacena ningún dato de tarjeta del cliente
+        # (cualquier campo de tarjeta recibido en la petición se ignora).
 
         cliente.update()
         return cliente
@@ -162,4 +139,3 @@ class ClientesController:
         cliente.estado = "Inactivo"
         cliente.update()
         return True
-
