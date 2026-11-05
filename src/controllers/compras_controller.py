@@ -5,6 +5,7 @@ from src.models.proveedores import Proveedores
 from src.models.usuarios import Usuarios
 from src.models.productos import Productos
 from src.models.detalle_compras import DetalleCompras
+from src.models.metodos_pago import MetodosPago
 from src.utils.pagination import paginate_query
 
 class ComprasController:
@@ -38,6 +39,14 @@ class ComprasController:
         # Enriquecer Usuario si existe
         usr = Usuarios.get_by_id(compra.id_usuario)
         c_dict['usuario'] = usr.to_dict() if usr else None
+
+        # Enriquecer Método de Pago si existe
+        id_mp = getattr(compra, 'id_metodo_pago', None)
+        mp_obj = MetodosPago.get_by_id(id_mp) if id_mp else None
+        c_dict['metodo_pago_detalle'] = mp_obj.to_dict() if mp_obj else None
+        if not c_dict.get('metodo_pago'):
+            c_dict['metodo_pago'] = mp_obj.nombre if mp_obj else 'Efectivo'
+        c_dict['referencia_pago'] = getattr(compra, 'referencia_pago', None)
 
         # Enriquecer Ítems Comprados (DetalleCompras)
         detalles_db = session.query(DetalleCompras).filter_by(id_compra=id).all()
@@ -124,6 +133,27 @@ class ComprasController:
         if not detalles and subtotal <= 0:
             raise ValueError("La orden de compra debe contener al menos un producto o ítem en el detalle.")
 
+        # Resolver método de pago con el que se canceló la mercancía
+        id_mp_raw = data.get("id_metodo_pago")
+        nombre_mp_raw = (data.get("metodo_pago") or "").strip()
+        id_mp_val = None
+        nombre_mp_val = nombre_mp_raw
+
+        if id_mp_raw is not None and str(id_mp_raw).strip() != "":
+            try:
+                id_mp_val = int(id_mp_raw)
+                mp_obj = MetodosPago.get_by_id(id_mp_val)
+                if mp_obj and getattr(mp_obj, "nombre", None) and not nombre_mp_val:
+                    nombre_mp_val = mp_obj.nombre
+            except ValueError:
+                if not nombre_mp_val:
+                    nombre_mp_val = str(id_mp_raw).strip()
+
+        if not nombre_mp_val:
+            nombre_mp_val = "Efectivo"
+        if not id_mp_val:
+            id_mp_val = 1
+
         compra = Compras()
         compra.numero = num
         compra.subtotal = subtotal
@@ -133,6 +163,9 @@ class ComprasController:
         compra.estado = data.get("estado", "Completada")
         compra.id_proveedor = int(id_prov)
         compra.id_usuario = int(data.get("id_usuario") or 1)
+        compra.id_metodo_pago = id_mp_val
+        compra.metodo_pago = nombre_mp_val
+        compra.referencia_pago = (data.get("referencia_pago") or "").strip() or None
         compra.id_empresa = id_empresa_val
         
         compra.create()
@@ -204,6 +237,18 @@ class ComprasController:
         compra.total = data.get("total", total)
         compra.id_proveedor = int(data.get("id_proveedor", compra.id_proveedor))
         compra.id_usuario = int(data.get("id_usuario", compra.id_usuario))
+        if "id_metodo_pago" in data and data.get("id_metodo_pago"):
+            try:
+                compra.id_metodo_pago = int(data.get("id_metodo_pago"))
+                mp_obj = MetodosPago.get_by_id(compra.id_metodo_pago)
+                if mp_obj and getattr(mp_obj, "nombre", None) and not data.get("metodo_pago"):
+                    compra.metodo_pago = mp_obj.nombre
+            except ValueError:
+                pass
+        if "metodo_pago" in data and data.get("metodo_pago"):
+            compra.metodo_pago = str(data.get("metodo_pago")).strip()
+        if "referencia_pago" in data:
+            compra.referencia_pago = (data.get("referencia_pago") or "").strip() or None
         
         compra.update()
         return compra

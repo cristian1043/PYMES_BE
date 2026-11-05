@@ -110,7 +110,10 @@ class DatabaseMigrations:
                 columnas_compras = [
                     "ALTER TABLE compras ADD COLUMN numero VARCHAR(50)",
                     "ALTER TABLE compras ADD COLUMN estado VARCHAR(20) DEFAULT 'Completada'",
-                    "ALTER TABLE compras ADD COLUMN id_empresa INT"
+                    "ALTER TABLE compras ADD COLUMN id_empresa INT",
+                    "ALTER TABLE compras ADD COLUMN id_metodo_pago INT DEFAULT 1",
+                    "ALTER TABLE compras ADD COLUMN metodo_pago VARCHAR(100) DEFAULT 'Efectivo'",
+                    "ALTER TABLE compras ADD COLUMN referencia_pago VARCHAR(100)"
                 ]
                 for query in columnas_compras:
                     try:
@@ -158,7 +161,9 @@ class DatabaseMigrations:
                     "UPDATE facturas SET id_empresa = 1 WHERE id_empresa IS NULL",
                     "UPDATE proveedores SET id_empresa = 1 WHERE id_empresa IS NULL",
                     "UPDATE productos SET id_empresa = 1 WHERE id_empresa IS NULL",
-                    "UPDATE compras SET id_empresa = 1 WHERE id_empresa IS NULL"
+                    "UPDATE compras SET id_empresa = 1 WHERE id_empresa IS NULL",
+                    "UPDATE compras SET metodo_pago = 'Efectivo' WHERE metodo_pago IS NULL OR metodo_pago = ''",
+                    "UPDATE compras SET id_metodo_pago = 1 WHERE id_metodo_pago IS NULL"
                 ]
                 for rep in reparaciones:
                     try:
