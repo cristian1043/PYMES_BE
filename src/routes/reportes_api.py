@@ -5,6 +5,16 @@ from src.utils.security import roles_required, tenant_required
 
 reportes_bp = Blueprint("reportes", __name__)
 
+
+def _resolver_empresa_id():
+    return (
+        request.args.get("empresa_id")
+        or request.args.get("id_empresa")
+        or request.headers.get("X-Empresa-ID")
+        or request.environ.get("tenant_empresa_id")
+    )
+
+
 # ===========================
 # Reporte Financiero de Ventas
 # ===========================
@@ -13,7 +23,7 @@ reportes_bp = Blueprint("reportes", __name__)
 @roles_required("Administrador", 1)
 @tenant_required(allow_global_admin=True)
 def get_reporte_ventas():
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     resumen = ReportesController.get_reporte_ventas(empresa_id=empresa_id)
     return jsonify(resumen), 200
 
@@ -25,7 +35,7 @@ def get_reporte_ventas():
 @roles_required("Administrador", 1)
 @tenant_required(allow_global_admin=True)
 def get_reporte_clientes():
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     ranking = ReportesController.get_reporte_clientes(empresa_id=empresa_id)
     return jsonify(ranking), 200
 
@@ -37,7 +47,7 @@ def get_reporte_clientes():
 @roles_required("Administrador", "Almacenista", 1, 3)
 @tenant_required(allow_global_admin=True)
 def get_reporte_inventario():
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     inventario = ReportesController.get_reporte_inventario(empresa_id=empresa_id)
     return jsonify(inventario), 200
 
@@ -49,7 +59,7 @@ def get_reporte_inventario():
 @roles_required("Administrador", "Almacenista", 1, 3)
 @tenant_required(allow_global_admin=True)
 def get_reporte_top_productos():
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     ranking = ReportesController.get_reporte_top_productos(empresa_id=empresa_id)
     return jsonify(ranking), 200
 
@@ -61,7 +71,7 @@ def get_reporte_top_productos():
 @roles_required("Administrador", 1)
 @tenant_required(allow_global_admin=True)
 def get_reporte_dashboard():
-    empresa_id = request.args.get("empresa_id") or request.args.get("id_empresa")
+    empresa_id = _resolver_empresa_id()
     ventas = ReportesController.get_reporte_ventas(empresa_id=empresa_id)
     inventario = ReportesController.get_reporte_inventario(empresa_id=empresa_id)
     return jsonify({
@@ -73,5 +83,3 @@ def get_reporte_dashboard():
         'valor_inventario': inventario.get('valor_total_inventario', 0.0),
         'stock_bajo': inventario.get('productos_bajo_stock', 0)
     }), 200
-
-

@@ -10,7 +10,23 @@ usuario_empresas_bp = Blueprint("usuario_empresas", __name__)
 @jwt_required()
 def get_vinculaciones():
     try:
+        claims = get_jwt() or {}
+        identity = get_jwt_identity()
+        es_super_admin = (claims.get("id_rol") == 1 or claims.get("rol") == "Administrador")
+        empresa_id = request.args.get("empresa_id") or request.headers.get("X-Empresa-ID")
         vinculaciones = UsuarioEmpresasController.get()
+        if not es_super_admin:
+            if empresa_id and str(empresa_id).isdigit():
+                eid = int(empresa_id)
+                vinc_caller = UsuarioEmpresas.get_by_usuario_empresa(int(identity), eid) if (identity and str(identity).isdigit()) else None
+                if vinc_caller and vinc_caller.estado == "Activo":
+                    vinculaciones = [v for v in vinculaciones if v.empresa_id == eid]
+                else:
+                    vinculaciones = [v for v in vinculaciones if str(v.usuario_id) == str(identity)]
+            else:
+                vinculaciones = [v for v in vinculaciones if str(v.usuario_id) == str(identity)]
+        elif empresa_id and str(empresa_id).isdigit():
+            vinculaciones = [v for v in vinculaciones if v.empresa_id == int(empresa_id)]
         return jsonify([v.to_dict() for v in vinculaciones]), 200
     except Exception as e:
         session.rollback()
@@ -52,8 +68,13 @@ def actualizar_vinculacion():
             if vinc_caller and vinc_caller.rol_id == 1 and vinc_caller.estado == "Activo":
                 es_admin_empresa = True
 
-        # Permitir si es SuperAdmin, Administrador de la empresa, o el usuario inicial vinculándose a la empresa que acaba de crear
-        es_auto_vinculacion_inicial = (identity and int(identity) == usuario_id and rol_id == 1)
+        # Permitir autovinculación inicial ÚNICAMENTE si la empresa aún no tiene ningún Administrador activo vinculado
+        tiene_admin_empresa = session.query(UsuarioEmpresas).filter_by(
+            empresa_id=empresa_id, rol_id=1, estado="Activo"
+        ).first() is not None
+        es_auto_vinculacion_inicial = (
+            not tiene_admin_empresa and identity and int(identity) == usuario_id and int(rol_id or 0) == 1
+        )
         if not es_super_admin and not es_admin_empresa and not es_auto_vinculacion_inicial:
             return jsonify({"mensaje": "Acceso denegado: Se requieren permisos de Administrador en esta empresa para gestionar vinculaciones."}), 403
 

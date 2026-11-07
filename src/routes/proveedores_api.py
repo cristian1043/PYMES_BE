@@ -2,9 +2,18 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from src.controllers.proveedores_controller import ProveedoresController
 from src.utils.pagination import get_pagination_params
-from src.utils.security import roles_required, tenant_required
+from src.utils.security import roles_required, tenant_required, verificar_acceso_empresa
 
 proveedores_bp = Blueprint("proveedores", __name__)
+
+
+def _validar_acceso_proveedor(proveedor):
+    if not proveedor:
+        return jsonify({"mensaje": "Proveedor no encontrado"}), 404
+    if getattr(proveedor, "id_empresa", None) and not verificar_acceso_empresa(proveedor.id_empresa):
+        return jsonify({"mensaje": "No tienes permisos para acceder a proveedores de otra empresa"}), 403
+    return None
+
 
 # ===========================
 # Obtener proveedores (paginado)
@@ -46,9 +55,10 @@ def get_siguiente_codigo():
 @jwt_required()
 def get_proveedor(id):
     proveedor = ProveedoresController.get_by_id(id)
-    if proveedor:
-        return jsonify(proveedor.to_dict()), 200
-    return jsonify({"mensaje": "Proveedor no encontrado"}), 404
+    err = _validar_acceso_proveedor(proveedor)
+    if err:
+        return err
+    return jsonify(proveedor.to_dict()), 200
 
 # ===========================
 # Crear proveedor
@@ -78,6 +88,10 @@ def create_proveedor():
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def update_proveedor(id):
+    proveedor_actual = ProveedoresController.get_by_id(id)
+    err = _validar_acceso_proveedor(proveedor_actual)
+    if err:
+        return err
     data = request.get_json() or {}
     proveedor = ProveedoresController.update(id, data)
     if proveedor:
@@ -91,6 +105,10 @@ def update_proveedor(id):
 @jwt_required()
 @roles_required("Administrador", 1)
 def toggle_estado_proveedor(id):
+    proveedor_actual = ProveedoresController.get_by_id(id)
+    err = _validar_acceso_proveedor(proveedor_actual)
+    if err:
+        return err
     data = request.get_json() or {}
     nuevo_estado = data.get("estado", "Inactivo")
     proveedor = ProveedoresController.desactivar(id, estado=nuevo_estado)
@@ -105,6 +123,10 @@ def toggle_estado_proveedor(id):
 @jwt_required()
 @roles_required("Administrador", 1)
 def delete_proveedor(id):
+    proveedor_actual = ProveedoresController.get_by_id(id)
+    err = _validar_acceso_proveedor(proveedor_actual)
+    if err:
+        return err
     eliminado = ProveedoresController.delete(id)
     if eliminado:
         return jsonify({"mensaje": "Proveedor desactivado correctamente"}), 200

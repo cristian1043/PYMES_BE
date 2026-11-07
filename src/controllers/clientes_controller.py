@@ -40,9 +40,9 @@ class ClientesController:
         emp_id = data.get("id_empresa") or data.get("empresa_id") or 1
         eid = int(emp_id)
 
-        # Si ya existe un cliente con este documento, actualizarlo y vincularlo a la empresa activa
+        # Buscar únicamente dentro de la misma empresa o registros huérfanos (id_empresa IS NULL)
         if doc_input:
-            cliente_existente = session.query(Clientes).filter(Clientes.documento == doc_input).first()
+            cliente_existente = Clientes.get_by_documento(doc_input, empresa_id=eid)
             if cliente_existente:
                 cliente_existente.nombre = data.get("nombre") or cliente_existente.nombre
                 if hasattr(cliente_existente, 'apellido') and data.get("apellido"):
@@ -87,6 +87,8 @@ class ClientesController:
             cliente.save()
         except Exception:
             session.rollback()
+            # Si la BD heredada tiene restricción UNIQUE global en documento o email, aislar por empresa sin sobrescribir otra empresa
+            cliente.documento = f"{doc_input}#E{eid}"
             cliente.email = f"cli_{doc_input}_{eid}_{int(datetime.now().timestamp())}@correo.com"
             cliente.save()
 

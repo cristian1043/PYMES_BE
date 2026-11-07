@@ -18,7 +18,11 @@ class DetalleCompras(Base):
     def save(self):
         session.add(self)
         session.commit()
- 
+
+    def create(self):
+        session.add(self)
+        session.commit()
+
     @staticmethod
     def get():
         return session.query(DetalleCompras).all()
@@ -33,7 +37,7 @@ class DetalleCompras(Base):
     def delete(self):
         session.delete(self)
         session.commit()
-        
+
     def to_dict(self):
         return {
             "id": self.id,

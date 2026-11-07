@@ -128,7 +128,8 @@ class DatabaseMigrations:
                     "ALTER TABLE compras ADD COLUMN id_empresa INT",
                     "ALTER TABLE compras ADD COLUMN id_metodo_pago INT DEFAULT 1",
                     "ALTER TABLE compras ADD COLUMN metodo_pago VARCHAR(100) DEFAULT 'Efectivo'",
-                    "ALTER TABLE compras ADD COLUMN referencia_pago VARCHAR(100)"
+                    "ALTER TABLE compras ADD COLUMN referencia_pago VARCHAR(100)",
+                    "ALTER TABLE movimientos_inventario ADD COLUMN id_empresa INT"
                 ]
                 for query in columnas_compras:
                     try:

@@ -32,10 +32,15 @@ def refresh():
         usuario = Usuarios.get_by_id(user_id) if user_id else None
         
         if usuario:
+            if usuario.estado and usuario.estado.lower() == "inactivo":
+                return jsonify({"exito": False, "mensaje": "El usuario se encuentra inactivo"}), 403
             rol = Roles.get_by_id(usuario.id_rol)
             nombre_rol = rol.nombre if rol else "Usuario"
             relaciones_empresa = UsuarioEmpresas.get_by_usuario_id(usuario.id)
-            empresas_ids = [rel.empresa_id for rel in relaciones_empresa]
+            empresas_ids = [
+                rel.empresa_id for rel in relaciones_empresa
+                if (getattr(rel, "estado", "Activo") or "Activo") == "Activo"
+            ]
 
             user_claims = {
                 "usuario_id": usuario.id,
@@ -43,7 +48,8 @@ def refresh():
                 "email": usuario.email,
                 "rol": nombre_rol,
                 "id_rol": usuario.id_rol,
-                "empresas": empresas_ids
+                "empresas": empresas_ids,
+                "sesion_version": getattr(usuario, "sesion_version", 1) or 1
             }
         else:
             user_claims = {
@@ -75,10 +81,18 @@ def me():
         return jsonify({"mensaje": f"Error al obtener perfil: {str(e)}"}), 500
 
 @auth_bp.route("/cambiar-password", methods=["POST"])
+@jwt_required()
 def cambiar_password():
     try:
         data = request.get_json() or {}
-        usuario_id = data.get("usuario_id")
+        identity = get_jwt_identity()
+        claims = get_jwt() or {}
+        es_admin = claims.get("id_rol") == 1 or claims.get("rol") == "Administrador"
+
+        usuario_id = data.get("usuario_id") or identity
+        if not es_admin and identity and str(usuario_id) != str(identity):
+            return jsonify({"exito": False, "mensaje": "No tienes permiso para cambiar la contraseña de otro usuario."}), 403
+
         password_actual = data.get("password_actual")
         password_nueva = data.get("password_nueva")
 

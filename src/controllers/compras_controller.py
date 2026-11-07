@@ -105,7 +105,6 @@ class ComprasController:
         subtotal = float(data.get("subtotal", 0))
         iva = float(data.get("iva", 0))
         descuento = float(data.get("descuento", 0))
-        total = subtotal + iva - descuento
 
         emp_id = data.get("id_empresa") or data.get("empresa_id")
         if not emp_id:
@@ -133,6 +132,24 @@ class ComprasController:
         if not detalles and subtotal <= 0:
             raise ValueError("La orden de compra debe contener al menos un producto o ítem en el detalle.")
 
+        items_validados = []
+        subtotal_items = 0.0
+        for item in detalles:
+            id_prod = int(item.get("id_producto"))
+            cant = int(item.get("cantidad", 1))
+            if cant <= 0:
+                raise ValueError("La cantidad de cada producto comprado debe ser mayor a cero.")
+            costo_u = float(item.get("costo_unitario", item.get("precio_unitario", 0)))
+            if costo_u < 0:
+                raise ValueError("El costo unitario no puede ser negativo.")
+            subt_item = round(cant * costo_u, 2)
+            subtotal_items += subt_item
+            items_validados.append((id_prod, cant, costo_u, subt_item))
+
+        if items_validados and subtotal <= 0:
+            subtotal = subtotal_items
+        total = subtotal + iva - descuento
+
         # Resolver método de pago con el que se canceló la mercancía
         id_mp_raw = data.get("id_metodo_pago")
         nombre_mp_raw = (data.get("metodo_pago") or "").strip()
@@ -159,7 +176,8 @@ class ComprasController:
         compra.subtotal = subtotal
         compra.iva = iva
         compra.descuento = descuento
-        compra.total = data.get("total", total)
+        # El total siempre se calcula en el servidor
+        compra.total = total
         compra.estado = data.get("estado", "Completada")
         compra.id_proveedor = int(id_prov)
         compra.id_usuario = int(data.get("id_usuario") or 1)
@@ -170,30 +188,31 @@ class ComprasController:
         
         compra.create()
 
-        # Guardar ítems de DetalleCompras y AUMENTAR stock en inventario
-        detalles = data.get("detalles") or data.get("items") or []
-        for item in detalles:
-            try:
-                id_prod = int(item.get("id_producto"))
-                cant = int(item.get("cantidad", 1))
-                costo_u = float(item.get("costo_unitario", item.get("precio_unitario", 0)))
-                subt_item = float(item.get("subtotal", cant * costo_u))
+        # Guardar ítems de DetalleCompras, AUMENTAR stock en inventario y registrar Kardex
+        from src.models.movimiento_inventario import MovimientosInventario
+        for id_prod, cant, costo_u, subt_item in items_validados:
+            det_compra = DetalleCompras()
+            det_compra.id_compra = compra.id
+            det_compra.id_producto = id_prod
+            det_compra.cantidad = cant
+            det_compra.costo_unitario = costo_u
+            det_compra.subtotal = subt_item
+            det_compra.create()
 
-                det_compra = DetalleCompras()
-                det_compra.id_compra = compra.id
-                det_compra.id_producto = id_prod
-                det_compra.cantidad = cant
-                det_compra.costo_unitario = costo_u
-                det_compra.subtotal = subt_item
-                det_compra.create()
-
-                # Incrementar stock del producto comprado
-                prod = Productos.get_by_id(id_prod)
-                if prod:
-                    prod.stock += cant
-                    prod.update()
-            except Exception as e:
-                print(f"Error al guardar ítem de detalle compra: {str(e)}")
+            # Incrementar stock del producto comprado
+            prod = Productos.get_by_id(id_prod)
+            if prod:
+                prod.stock = (prod.stock or 0) + cant
+                prod.update()
+                mov = MovimientosInventario(
+                    tipo_movimiento="ENTRADA",
+                    cantidad=cant,
+                    observacion=f"Ingreso por Compra {compra.numero}",
+                    id_producto=prod.id,
+                    id_usuario=compra.id_usuario or 1,
+                    id_empresa=compra.id_empresa
+                )
+                mov.create()
 
         return compra
 
@@ -209,13 +228,23 @@ class ComprasController:
         compra.estado = "Cancelada"
         compra.update()
 
-        # Revertir stock de los productos comprados (restar)
+        # Revertir stock de los productos comprados (restar) y registrar Kardex
+        from src.models.movimiento_inventario import MovimientosInventario
         detalles = session.query(DetalleCompras).filter_by(id_compra=id).all()
         for det in detalles:
             prod = Productos.get_by_id(det.id_producto)
             if prod:
-                prod.stock = max(0, prod.stock - det.cantidad)
+                prod.stock = max(0, (prod.stock or 0) - det.cantidad)
                 prod.update()
+                mov = MovimientosInventario(
+                    tipo_movimiento="SALIDA",
+                    cantidad=det.cantidad,
+                    observacion=f"Reverso por cancelación de Compra {compra.numero}",
+                    id_producto=prod.id,
+                    id_usuario=compra.id_usuario or 1,
+                    id_empresa=compra.id_empresa
+                )
+                mov.create()
 
         return compra
 
@@ -234,7 +263,7 @@ class ComprasController:
         compra.subtotal = subtotal
         compra.iva = iva
         compra.descuento = descuento
-        compra.total = data.get("total", total)
+        compra.total = total
         compra.id_proveedor = int(data.get("id_proveedor", compra.id_proveedor))
         compra.id_usuario = int(data.get("id_usuario", compra.id_usuario))
         if "id_metodo_pago" in data and data.get("id_metodo_pago"):

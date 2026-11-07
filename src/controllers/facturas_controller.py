@@ -122,20 +122,49 @@ class FacturasController:
         except Exception:
             pass
 
+        # Prevalidar detalles y stock disponible antes de crear la factura
+        detalles = data.get("detalles") or data.get("items") or []
+        items_validados = []
+        subtotal_items = 0.0
+        for item in detalles:
+            id_prod = int(item.get("id_producto"))
+            cant = int(item.get("cantidad", 1))
+            if cant <= 0:
+                raise ValueError("La cantidad de cada producto en la factura debe ser mayor a cero.")
+            prod = Productos.get_by_id(id_prod)
+            if not prod:
+                raise ValueError(f"El producto con ID {id_prod} no existe.")
+            if getattr(prod, "id_empresa", None) and int(prod.id_empresa) != id_empresa_val:
+                raise ValueError(f"El producto '{prod.nombre}' no pertenece a la empresa activa.")
+            if (prod.stock or 0) < cant:
+                raise ValueError(f"Stock insuficiente para '{prod.nombre}' (disponible: {prod.stock or 0}, solicitado: {cant}).")
+            prec = float(item.get("precio_unitario", prod.precio or 0))
+            if prec < 0:
+                raise ValueError("El precio unitario no puede ser negativo.")
+            sub_item = round(cant * prec, 2)
+            subtotal_items += sub_item
+            items_validados.append((prod, cant, prec, sub_item))
+
         numero = data.get("numero")
         if not numero or not str(numero).strip():
             numero = FacturasController.obtener_siguiente_numero(id_empresa_val)
 
         subtotal = float(data.get("subtotal", 0))
+        if items_validados and subtotal <= 0:
+            subtotal = subtotal_items
         iva = float(data.get("iva", 0))
         descuento = float(data.get("descuento", 0))
+        if subtotal < 0 or iva < 0 or descuento < 0:
+            raise ValueError("Los valores de subtotal, IVA y descuento no pueden ser negativos.")
         total = subtotal + iva - descuento
+        if total < 0:
+            raise ValueError("El total de la factura no puede ser negativo.")
 
         fecha_factura = data.get("fecha")
         if not fecha_factura:
             fecha_factura = datetime.now()
 
-        # Resolver o autovincular cliente
+        # Resolver o autovincular cliente (respetando aislamiento multiempresa)
         id_cliente = data.get("id_cliente") or data.get("cliente_id")
         if not id_cliente:
             doc_cliente = data.get("documento_cliente") or data.get("documento")
@@ -144,8 +173,6 @@ class FacturasController:
             if doc_cliente and str(doc_cliente).strip():
                 doc_clean = str(doc_cliente).strip()
                 cliente_existente = Clientes.get_by_documento(doc_clean, empresa_id=id_empresa_val)
-                if not cliente_existente:
-                    cliente_existente = Clientes.get_by_documento(doc_clean)
                 if cliente_existente:
                     id_cliente = cliente_existente.id
                     cliente_existente.id_empresa = id_empresa_val
@@ -161,7 +188,7 @@ class FacturasController:
                         cliente_existente.direccion = str(data.get("direccion_cliente")).strip()
                     cliente_existente.update()
                 else:
-                    # Crear nuevo cliente para la empresa
+                    # Crear nuevo cliente para la empresa sin sobrescribir clientes de otras empresas
                     nom_full = str(nom_cliente or f"Cliente {doc_clean}").strip()
                     parts = nom_full.split(" ", 1)
                     first_name = parts[0]
@@ -191,16 +218,10 @@ class FacturasController:
                         id_cliente = nuevo_cliente.id
                     except Exception:
                         session.rollback()
-                        cli_dup = session.query(Clientes).filter(Clientes.documento == doc_clean).first()
-                        if cli_dup:
-                            cli_dup.id_empresa = id_empresa_val
-                            cli_dup.estado = "Activo"
-                            cli_dup.update()
-                            id_cliente = cli_dup.id
-                        else:
-                            nuevo_cliente.email = f"cli_{doc_clean}_{id_empresa_val}_{int(datetime.now().timestamp())}@correo.com"
-                            nuevo_cliente.save()
-                            id_cliente = nuevo_cliente.id
+                        nuevo_cliente.documento = f"{doc_clean}#E{id_empresa_val}"
+                        nuevo_cliente.email = f"cli_{doc_clean}_{id_empresa_val}_{int(datetime.now().timestamp())}@correo.com"
+                        nuevo_cliente.save()
+                        id_cliente = nuevo_cliente.id
             elif nom_cliente and str(nom_cliente).strip():
                 nom_full = str(nom_cliente).strip()
                 parts = nom_full.split(" ", 1)
@@ -235,7 +256,7 @@ class FacturasController:
 
         if id_cliente:
             cli_asoc = Clientes.get_by_id(id_cliente)
-            if cli_asoc and (not getattr(cli_asoc, 'id_empresa', None) or cli_asoc.id_empresa == 1):
+            if cli_asoc and not getattr(cli_asoc, 'id_empresa', None):
                 cli_asoc.id_empresa = id_empresa_val
                 cli_asoc.estado = "Activo"
                 cli_asoc.update()
@@ -312,30 +333,29 @@ class FacturasController:
         
         factura.create()
 
-        # Guardar ítems de DetalleFacturas y descontar stock si vienen en la petición
-        detalles = data.get("detalles") or data.get("items") or []
-        for item in detalles:
-            try:
-                id_prod = int(item.get("id_producto"))
-                cant = int(item.get("cantidad", 1))
-                prec = float(item.get("precio_unitario", 0))
-                sub_item = float(item.get("subtotal", cant * prec))
+        # Guardar ítems prevalidados de DetalleFacturas, descontar stock y registrar Kardex
+        from src.models.movimiento_inventario import MovimientosInventario
+        for prod, cant, prec, sub_item in items_validados:
+            det = DetalleFacturas()
+            det.id_factura = factura.id
+            det.id_producto = prod.id
+            det.cantidad = cant
+            det.precio_unitario = prec
+            det.subtotal = sub_item
+            session.add(det)
 
-                det = DetalleFacturas()
-                det.id_factura = factura.id
-                det.id_producto = id_prod
-                det.cantidad = cant
-                det.precio_unitario = prec
-                det.subtotal = sub_item
-                session.add(det)
+            prod.stock = (prod.stock or 0) - cant
+            session.add(prod)
 
-                # Actualizar stock de inventario
-                prod = Productos.get_by_id(id_prod)
-                if prod:
-                    prod.stock = max(0, (prod.stock or 0) - cant)
-                    session.add(prod)
-            except Exception as e:
-                print(f"Error al guardar detalle de factura o actualizar stock: {str(e)}")
+            mov = MovimientosInventario(
+                tipo_movimiento="SALIDA",
+                cantidad=cant,
+                observacion=f"Venta Factura {factura.numero}",
+                id_producto=prod.id,
+                id_usuario=factura.id_usuario,
+                id_empresa=factura.id_empresa
+            )
+            session.add(mov)
 
         session.commit()
         return factura
@@ -398,20 +418,33 @@ class FacturasController:
 
     @staticmethod
     def cancelar(id):
-        """Cancela la factura emitida y restaura el stock de productos vendidos."""
+        """Cancela la factura emitida y restaura el stock de productos vendidos (idempotente)."""
         factura = Facturas.get_by_id(id)
         if not factura:
             return None
 
+        if factura.estado == "Cancelada":
+            return factura
+
         factura.estado = "Cancelada"
         
-        # Revertir stock de productos
+        # Revertir stock de productos y registrar entrada en Kardex
+        from src.models.movimiento_inventario import MovimientosInventario
         detalles_db = session.query(DetalleFacturas).filter_by(id_factura=id).all()
         for det in detalles_db:
             prod = Productos.get_by_id(det.id_producto)
             if prod:
                 prod.stock = (prod.stock or 0) + det.cantidad
                 session.add(prod)
+                mov = MovimientosInventario(
+                    tipo_movimiento="ENTRADA",
+                    cantidad=det.cantidad,
+                    observacion=f"Reverso por cancelación de Factura {factura.numero}",
+                    id_producto=prod.id,
+                    id_usuario=factura.id_usuario or 1,
+                    id_empresa=factura.id_empresa
+                )
+                session.add(mov)
 
         session.commit()
         return factura

@@ -18,6 +18,29 @@ def verify_password(password_hash: str, password: str) -> bool:
         return True
     return check_password_hash(password_hash, password)
 
+def verificar_acceso_empresa(empresa_id) -> bool:
+    """Verifica que el usuario autenticado tenga acceso activo a la empresa indicada."""
+    if not empresa_id:
+        return True
+    try:
+        eid = int(empresa_id)
+    except (ValueError, TypeError):
+        return False
+
+    claims = get_jwt() or {}
+    id_rol = claims.get("id_rol", 0)
+    rol_usuario = claims.get("rol", "")
+    if id_rol == 1 or rol_usuario == "Administrador":
+        return True
+
+    user_id = get_jwt_identity()
+    if user_id and str(user_id).isdigit():
+        from src.models.usuario_empresas import UsuarioEmpresas
+        vinc = UsuarioEmpresas.get_by_usuario_empresa(int(user_id), eid)
+        if vinc and vinc.estado == "Activo":
+            return True
+    return False
+
 def roles_required(*roles):
     """
     Decorador RBAC: Verifica que el usuario autenticado posea alguno de los roles permitidos.
@@ -42,8 +65,29 @@ def roles_required(*roles):
             if id_rol == 1 or rol_usuario == "Administrador":
                 return fn(*args, **kwargs)
 
-            # Si el rol del usuario está en los roles permitidos (por nombre o ID)
             roles_permitidos_str = [str(r) for r in roles]
+
+            # Resolver rol específico de la empresa activa si se envió empresa_id / X-Empresa-ID
+            req_json = request.get_json(silent=True) or {}
+            empresa_id = (
+                request.args.get("empresa_id")
+                or request.args.get("id_empresa")
+                or (req_json.get("empresa_id") if isinstance(req_json, dict) else None)
+                or (req_json.get("id_empresa") if isinstance(req_json, dict) else None)
+                or request.headers.get("X-Empresa-ID")
+                or request.environ.get("tenant_empresa_id")
+            )
+            user_id = get_jwt_identity()
+            if empresa_id and str(empresa_id).isdigit() and user_id and str(user_id).isdigit():
+                from src.models.usuario_empresas import UsuarioEmpresas
+                vinc = UsuarioEmpresas.get_by_usuario_empresa(int(user_id), int(empresa_id))
+                if vinc and vinc.estado == "Activo":
+                    roles_map = {1: "Administrador", 2: "Vendedor", 3: "Almacenista"}
+                    rol_emp_nombre = roles_map.get(vinc.rol_id, "Vendedor")
+                    if vinc.rol_id == 1 or rol_emp_nombre in roles or str(vinc.rol_id) in roles_permitidos_str:
+                        return fn(*args, **kwargs)
+
+            # Si el rol global del usuario está en los roles permitidos (por nombre o ID)
             if rol_usuario in roles or str(id_rol) in roles_permitidos_str:
                 return fn(*args, **kwargs)
 
@@ -72,7 +116,6 @@ def tenant_required(allow_global_admin=True):
             claims = get_jwt() or {}
             rol_usuario = claims.get("rol", "")
             id_rol = claims.get("id_rol", 0)
-            empresas_usuario = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
 
             # Administrador global (Rol 1 o nombre Administrador) tiene acceso global si allow_global_admin está activo
             if allow_global_admin and (id_rol == 1 or rol_usuario == "Administrador"):
@@ -99,15 +142,14 @@ def tenant_required(allow_global_admin=True):
             except (ValueError, TypeError):
                 return jsonify({"exito": False, "mensaje": "Formato de empresa_id inválido."}), 400
 
-            if empresa_id not in empresas_usuario:
-                user_id = get_jwt_identity()
-                from src.models.usuario_empresas import UsuarioEmpresas
-                vinculacion = UsuarioEmpresas.get_by_usuario_empresa(user_id, empresa_id) if user_id else None
-                if not vinculacion or vinculacion.estado != 'Activo':
-                    return jsonify({
-                        "exito": False,
-                        "mensaje": f"Acceso denegado: El usuario no pertenece ni está activo en la empresa ID {empresa_id}."
-                    }), 403
+            user_id = get_jwt_identity()
+            from src.models.usuario_empresas import UsuarioEmpresas
+            vinculacion = UsuarioEmpresas.get_by_usuario_empresa(int(user_id), empresa_id) if (user_id and str(user_id).isdigit()) else None
+            if not vinculacion or vinculacion.estado != 'Activo':
+                return jsonify({
+                    "exito": False,
+                    "mensaje": f"Acceso denegado: El usuario no pertenece ni está activo en la empresa ID {empresa_id}."
+                }), 403
 
             request.environ['tenant_empresa_id'] = empresa_id
             return fn(*args, **kwargs)

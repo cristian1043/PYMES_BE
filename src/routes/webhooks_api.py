@@ -51,11 +51,20 @@ def checkout_simulado():
     """Checkout interactivo de pruebas (PSE / Nequi / QR Bancolombia / Tarjeta) para pagos sin llaves reales."""
     from src.models.transacciones_pago import TransaccionesPago
     from src.models.facturas import Facturas
+    from src.models.metodos_pago import MetodosPago
 
     ref = request.args.get("ref") or request.form.get("ref")
     tx = TransaccionesPago.get_by_referencia(ref) if ref else None
     if not tx:
         return Response("<h3>Cobro no encontrado</h3>", status=404, mimetype="text/html")
+
+    metodo = MetodosPago.get_by_id(tx.id_metodo_pago) if tx.id_metodo_pago else None
+    es_sandbox = (
+        (tx.proveedor or "").lower() == "simulado"
+        or (metodo is not None and (metodo.modo or "sandbox").lower() == "sandbox")
+    )
+    if not es_sandbox:
+        return Response("<h3>Simulación no permitida en modo producción</h3>", status=403, mimetype="text/html")
 
     if request.method == "POST" and tx.estado == "PENDIENTE":
         resultado = request.form.get("resultado", "APROBADA")

@@ -13,13 +13,17 @@ usuarios_bp = Blueprint("usuarios", __name__)
 # ===========================
 @usuarios_bp.route("/", methods=["GET"])
 @jwt_required()
-@roles_required("Administrador")
+@roles_required("Administrador", 1)
 def get_usuarios():
     try:
         page, per_page = get_pagination_params()
         q = request.args.get("q", "").strip()
         filtro = request.args.get("filtro", "").strip()
-        empresa_id = request.args.get("empresa_id")
+        empresa_id = (
+            request.args.get("empresa_id")
+            or request.args.get("id_empresa")
+            or request.headers.get("X-Empresa-ID")
+        )
         resultado = UsuariosController.get_paginated(page, per_page, q=q, filtro=filtro, empresa_id=empresa_id)
         return jsonify(resultado), 200
     except Exception as e:

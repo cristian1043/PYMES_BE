@@ -6,14 +6,14 @@ class Clientes(Base):
     __tablename__ = 'clientes'
  
     id = Column(Integer, primary_key=True)
-    documento = Column(String(50), unique=True, nullable=False)
+    documento = Column(String(50), nullable=False)
     tipo_documento = Column(String(20), default='CC', nullable=True)
     nombre = Column(String(100), nullable=False)
     apellido = Column(String(100), nullable=True)
     codigo = Column(String(50), nullable=True)
     direccion = Column(String(255), nullable=False)
     telefono = Column(String(20), nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
+    email = Column(String(255), nullable=False)
     estado = Column(String(20), default='Activo', nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow) 
     # OBSOLETO (PCI-DSS): columnas de tarjeta conservadas solo por compatibilidad con bases de datos existentes.
@@ -56,17 +56,22 @@ class Clientes(Base):
                 eid = int(empresa_id)
             except (ValueError, TypeError):
                 eid = 1
-            c = session.query(Clientes).filter(Clientes.documento == doc_str, Clientes.id_empresa == eid).first()
+            c = session.query(Clientes).filter(
+                (Clientes.documento == doc_str) | (Clientes.documento == f"{doc_str}#E{eid}"),
+                Clientes.id_empresa == eid
+            ).first()
             if c:
                 return c
-            # Si no existe con id_empresa específico, buscar si existe huérfano o general
-            c_loose = session.query(Clientes).filter(Clientes.documento == doc_str).first()
-            if c_loose:
-                if not getattr(c_loose, 'id_empresa', None):
-                    c_loose.id_empresa = eid
-                    c_loose.estado = "Activo"
-                    c_loose.update()
-                return c_loose
+            # Solo adoptar registros huérfanos sin empresa asignada (nunca robar clientes de otra empresa)
+            c_orphan = session.query(Clientes).filter(
+                Clientes.documento == doc_str,
+                Clientes.id_empresa == None
+            ).first()
+            if c_orphan:
+                c_orphan.id_empresa = eid
+                c_orphan.estado = "Activo"
+                c_orphan.update()
+                return c_orphan
             return None
         return session.query(Clientes).filter(Clientes.documento == doc_str).first()
 
@@ -78,12 +83,13 @@ class Clientes(Base):
         session.commit()
    
     def to_dict(self):
+        doc_clean = (self.documento or "").split("#E")[0]
         return {
             "id": self.id,
             "codigo": getattr(self, "codigo", None) or f"CLI-E{getattr(self, 'id_empresa', 1) or 1}-{self.id:03d}",
             "nombre": self.nombre,
             "apellido": getattr(self, "apellido", "") or "",
-            "documento": self.documento,
+            "documento": doc_clean,
             "tipo_documento": getattr(self, "tipo_documento", "CC") or "CC",
             "direccion": self.direccion,
             "telefono": self.telefono,

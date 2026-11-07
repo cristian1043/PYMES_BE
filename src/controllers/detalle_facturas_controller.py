@@ -1,5 +1,5 @@
 from src.models.detalle_facturas import DetalleFacturas
- 
+
 
 class DetalleFacturasController:
 
@@ -7,24 +7,18 @@ class DetalleFacturasController:
     def get():
         return DetalleFacturas.get()
 
-
     @staticmethod
     def get_by_id(id):
         return DetalleFacturas.get_by_id(id)
-    
-        if detalle is None:
-            return "Detalle de factura no encontrado"
-        
-        return detalle
-     
+
     @staticmethod
     def create(data):
         detalle = DetalleFacturas()
-        detalle.cantidad = data["cantidad"]
-        detalle.precio_unitario = data["precio_unitario"]
-        detalle.subtotal = data["subtotal"]
-        detalle.id_factura = data["id_factura"]
-        detalle.id_producto = data["id_producto"]
+        detalle.cantidad = int(data["cantidad"])
+        detalle.precio_unitario = float(data["precio_unitario"])
+        detalle.subtotal = float(data.get("subtotal", detalle.cantidad * detalle.precio_unitario))
+        detalle.id_factura = int(data["id_factura"])
+        detalle.id_producto = int(data["id_producto"])
         detalle.create()
         return detalle
 
@@ -32,25 +26,23 @@ class DetalleFacturasController:
     def update(id, data):
         detalle = DetalleFacturas.get_by_id(id)
         if detalle is None:
-            return "Detalle de factura no encontrado"
-        detalle.cantidad = data["cantidad"]
-        detalle.precio_unitario = data["precio_unitario"]
-        detalle.subtotal = data["subtotal"]
-        detalle.id_factura = data["id_factura"]
-        detalle.id_producto = data["id_producto"]
+            return None
+        if "cantidad" in data:
+            detalle.cantidad = int(data["cantidad"])
+        if "precio_unitario" in data:
+            detalle.precio_unitario = float(data["precio_unitario"])
+        detalle.subtotal = float(data.get("subtotal", detalle.cantidad * detalle.precio_unitario))
+        if "id_factura" in data:
+            detalle.id_factura = int(data["id_factura"])
+        if "id_producto" in data:
+            detalle.id_producto = int(data["id_producto"])
         detalle.update()
         return detalle
 
     @staticmethod
     def delete(id):
-
         detalle = DetalleFacturas.get_by_id(id)
-
         if detalle is None:
-            return "Detalle de factura no encontrado"
-
+            return False
         detalle.delete()
-
-        return True and "Detalle de factura eliminado correctamente"
-
-      
+        return True

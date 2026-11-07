@@ -138,17 +138,27 @@ class ReportesController:
 
     @staticmethod
     def get_reporte_top_productos(empresa_id=None):
-        """Calcula el ranking de productos más vendidos según el historial de facturación."""
+        """Calcula el ranking de productos más vendidos según el historial de facturación válida (excluye canceladas)."""
         try:
             from src.models.detalle_facturas import DetalleFacturas
             prod_query = session.query(Productos)
+            fac_query = session.query(Facturas)
             if empresa_id:
                 prod_query = prod_query.filter(Productos.id_empresa == int(empresa_id))
+                fac_query = fac_query.filter(Facturas.id_empresa == int(empresa_id))
             productos = prod_query.all()
             prod_ids = {p.id for p in productos}
 
+            facturas_validas_ids = {
+                f.id for f in fac_query.all()
+                if getattr(f, 'estado', 'Emitida') != 'Cancelada'
+            }
+
             detalles_all = session.query(DetalleFacturas).all()
-            detalles = [d for d in detalles_all if d.id_producto in prod_ids]
+            detalles = [
+                d for d in detalles_all
+                if d.id_producto in prod_ids and d.id_factura in facturas_validas_ids
+            ]
 
             ventas_prod = {}
             for d in detalles:
@@ -179,4 +189,3 @@ class ReportesController:
             session.rollback()
             print(f"Error en get_reporte_top_productos: {str(e)}")
             return []
-

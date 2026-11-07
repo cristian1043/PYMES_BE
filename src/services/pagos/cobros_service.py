@@ -279,6 +279,13 @@ class CobrosService:
     def simular(tx, resultado):
         if tx.estado != PENDIENTE:
             raise ErrorCobro("El cobro ya no está pendiente.")
+        metodo = MetodosPago.get_by_id(tx.id_metodo_pago) if tx.id_metodo_pago else None
+        es_sandbox = (
+            (tx.proveedor or "").lower() == "simulado"
+            or (metodo is not None and (metodo.modo or "sandbox").lower() == "sandbox")
+        )
+        if not es_sandbox:
+            raise ErrorCobro("La simulación de pago solo está permitida en modo sandbox o proveedor simulado.")
         resultado = str(resultado or "").upper().strip()
         if resultado == "APPROVED":
             resultado = APROBADA

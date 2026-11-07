@@ -22,7 +22,10 @@ class UsuariosController:
             from src.models.usuario_empresas import UsuarioEmpresas
             query = session.query(Usuarios, UsuarioEmpresas).join(
                 UsuarioEmpresas, Usuarios.id == UsuarioEmpresas.usuario_id
-            ).filter(UsuarioEmpresas.empresa_id == int(empresa_id))
+            ).filter(
+                UsuarioEmpresas.empresa_id == int(empresa_id),
+                UsuarioEmpresas.estado != "No Vinculado"
+            )
 
             if q:
                 q_clean = str(q).strip()

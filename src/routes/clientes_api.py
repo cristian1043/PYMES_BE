@@ -2,9 +2,18 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from src.controllers.clientes_controller import ClientesController
 from src.utils.pagination import get_pagination_params
-from src.utils.security import roles_required, tenant_required
+from src.utils.security import roles_required, tenant_required, verificar_acceso_empresa
 
 clientes_bp = Blueprint("clientes", __name__)
+
+
+def _validar_acceso_cliente(cliente):
+    if not cliente:
+        return jsonify({"mensaje": "Cliente no encontrado"}), 404
+    if getattr(cliente, "id_empresa", None) and not verificar_acceso_empresa(cliente.id_empresa):
+        return jsonify({"mensaje": "No tienes permisos para acceder a clientes de otra empresa"}), 403
+    return None
+
 
 # ===========================
 # Obtener clientes (con paginación)
@@ -41,6 +50,9 @@ def buscar_cliente():
         return jsonify({"mensaje": "Parámetro 'documento' es requerido"}), 400
     cliente = ClientesController.buscar_por_documento(documento, empresa_id=empresa_id)
     if cliente and hasattr(cliente, "to_dict"):
+        err = _validar_acceso_cliente(cliente)
+        if err:
+            return err
         return jsonify(cliente.to_dict()), 200
     return jsonify({"mensaje": "Cliente no encontrado"}), 404
 
@@ -51,9 +63,10 @@ def buscar_cliente():
 @jwt_required()
 def get_cliente(id):
     cliente = ClientesController.get_by_id(id)
-    if cliente and hasattr(cliente, "to_dict"):
-        return jsonify(cliente.to_dict()), 200
-    return jsonify({"mensaje": "Cliente no encontrado"}), 404
+    err = _validar_acceso_cliente(cliente)
+    if err:
+        return err
+    return jsonify(cliente.to_dict()), 200
 
 # ===========================
 # Crear cliente
@@ -83,6 +96,10 @@ def create_cliente():
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def update_cliente(id):
+    cliente_actual = ClientesController.get_by_id(id)
+    err = _validar_acceso_cliente(cliente_actual)
+    if err:
+        return err
     data = request.get_json() or {}
     cliente = ClientesController.update(id, data)
     if cliente and hasattr(cliente, "to_dict"):
@@ -96,6 +113,10 @@ def update_cliente(id):
 @jwt_required()
 @roles_required("Administrador", 1)
 def toggle_estado_cliente(id):
+    cliente_actual = ClientesController.get_by_id(id)
+    err = _validar_acceso_cliente(cliente_actual)
+    if err:
+        return err
     data = request.get_json() or {}
     nuevo_estado = data.get("estado", "Inactivo")
     cliente = ClientesController.desactivar(id, estado=nuevo_estado)
@@ -110,6 +131,10 @@ def toggle_estado_cliente(id):
 @jwt_required()
 @roles_required("Administrador", 1)
 def delete_cliente(id):
+    cliente_actual = ClientesController.get_by_id(id)
+    err = _validar_acceso_cliente(cliente_actual)
+    if err:
+        return err
     eliminado = ClientesController.delete(id)
     if eliminado:
         return jsonify({"mensaje": "Cliente desactivado correctamente"}), 200

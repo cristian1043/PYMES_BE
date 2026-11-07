@@ -12,21 +12,25 @@ class Roles(Base):
         session.add(self)
         session.commit()
 
+    def create(self):
+        session.add(self)
+        session.commit()
+
     @staticmethod
     def get():
-        return session.query(Roles).all()   
-    
+        return session.query(Roles).all()
+
     @staticmethod
     def get_by_id(id):
         return session.query(Roles).filter_by(id=id).first()
 
     def update(self):
         session.commit()
-        
+
     def delete(self):
         session.delete(self)
         session.commit()
-        
+
     def to_dict(self):
         return {
             "id": self.id,

@@ -42,9 +42,12 @@ class AuthController:
         rol = Roles.get_by_id(usuario.id_rol)
         nombre_rol = rol.nombre if rol else "Usuario"
 
-        # Obtener empresas asociadas al usuario
+        # Obtener empresas activas asociadas al usuario (excluir desvinculadas/inactivas)
         relaciones_empresa = UsuarioEmpresas.get_by_usuario_id(usuario.id)
-        empresas_ids = [rel.empresa_id for rel in relaciones_empresa]
+        empresas_ids = [
+            rel.empresa_id for rel in relaciones_empresa
+            if (getattr(rel, "estado", "Activo") or "Activo") == "Activo"
+        ]
 
         claims = {
             "usuario_id": usuario.id,

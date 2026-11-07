@@ -14,8 +14,8 @@ class RolesController:
     def create(data):
         rol = Roles()
         rol.nombre = data["nombre"]
-        rol.descripcion = data["descripcion"]
-        rol.create()
+        rol.descripcion = data.get("descripcion", "")
+        rol.save()
         return rol
 
     @staticmethod
@@ -23,46 +23,17 @@ class RolesController:
         rol = Roles.get_by_id(id)
         if rol is None:
             return None
-        rol.nombre = data["nombre"]
-        rol.descripcion = data["descripcion"]
+        if "nombre" in data:
+            rol.nombre = data["nombre"]
+        if "descripcion" in data:
+            rol.descripcion = data["descripcion"]
         rol.update()
         return rol
 
     @staticmethod
     def delete(id):
         rol = Roles.get_by_id(id)
-
         if rol is None:
             return False
-
-        rol.delete()
-        return True
-
-        rol.nombre = data["nombre"]
-        rol.descripcion = data["descripcion"]
-
-        rol.update()
-
-        return rol
-
-    @staticmethod
-    def delete(id):
-        rol = Roles.get_by_id(id)
-
-        if rol is None:
-            return False
-
-        rol.delete()
-        return True
-
-        return rol
-
-    @staticmethod
-    def delete(id):
-        rol = Roles.get_by_id(id)
-
-        if rol is None:
-            return False
-
         rol.delete()
         return True

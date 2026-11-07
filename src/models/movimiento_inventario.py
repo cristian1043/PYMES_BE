@@ -16,14 +16,24 @@ class MovimientosInventario(Base):
 
     id_producto = Column(Integer, ForeignKey('productos.id'), nullable=False)
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    id_empresa = Column(Integer, nullable=True)
 
     def save(self):
         session.add(self)
         session.commit()
 
+    def create(self):
+        session.add(self)
+        session.commit()
+        return self
+
     @staticmethod
     def get():
         return session.query(MovimientosInventario).all()
+
+    @staticmethod
+    def get_query():
+        return session.query(MovimientosInventario)
 
     @staticmethod
     def get_by_id(id):
@@ -41,8 +51,9 @@ class MovimientosInventario(Base):
             "id": self.id,
             "tipo_movimiento": self.tipo_movimiento,
             "cantidad": self.cantidad,
-            "fecha": self.fecha,
+            "fecha": self.fecha.strftime('%Y-%m-%d %H:%M:%S') if isinstance(self.fecha, datetime) else self.fecha,
             "observacion": self.observacion,
             "id_producto": self.id_producto,
-            "id_usuario": self.id_usuario
+            "id_usuario": self.id_usuario,
+            "id_empresa": getattr(self, "id_empresa", None)
         }
