@@ -1,15 +1,34 @@
 import os
 import smtplib
+import threading
 from email.message import EmailMessage
 
 
 class Mailer:
     """
     Utilidad de despacho de correos electrónicos vía SMTP (Gmail / Outlook / SMTP corporativo).
-    Si las variables de entorno SMTP_USER y SMTP_PASSWORD no están configuradas,
-    registra el envío en consola y retorna False para que la capa superior habilite
-    la entrega inmediata del código OTP en pantalla (modo desarrollo/local).
+    Ejecuta el despacho de red en un hilo en segundo plano (no bloqueante) para evitar
+    timeouts HTTP (ej. en Render u otros entornos cloud cuando el puerto 587 tiene latencia o bloqueo).
     """
+
+    @staticmethod
+    def _despachar_smtp_sync(smtp_host: str, smtp_port: int, smtp_user: str, smtp_pass: str, msg: EmailMessage, destinatario: str):
+        try:
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=4) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=4) as server:
+                    server.ehlo()
+                    if smtp_port in (587, 25):
+                        server.starttls()
+                        server.ehlo()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            print(f"[MAILER SMTP] Correo enviado exitosamente a {destinatario}")
+        except Exception as e:
+            print(f"[MAILER ERROR] No se pudo enviar correo SMTP a {destinatario}: {e}")
 
     @staticmethod
     def enviar_correo(destinatario: str, asunto: str, cuerpo_html: str, cuerpo_texto: str = "") -> bool:
@@ -41,17 +60,15 @@ class Mailer:
             msg.set_content(cuerpo_texto or "Código de verificación de seguridad PYMESOFT.")
             msg.add_alternative(cuerpo_html, subtype="html")
 
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-                server.ehlo()
-                if smtp_port in (587, 25):
-                    server.starttls()
-                    server.ehlo()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-            print(f"[MAILER SMTP] Correo enviado exitosamente a {destinatario}")
+            hilo = threading.Thread(
+                target=Mailer._despachar_smtp_sync,
+                args=(smtp_host, smtp_port, smtp_user, smtp_pass, msg, destinatario),
+                daemon=True,
+            )
+            hilo.start()
             return True
         except Exception as e:
-            print(f"[MAILER ERROR] No se pudo enviar correo SMTP a {destinatario}: {e}")
+            print(f"[MAILER ERROR] Fallo al programar envío de correo a {destinatario}: {e}")
             return False
 
     @staticmethod
