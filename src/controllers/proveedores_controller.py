@@ -2,16 +2,14 @@ from src.models.proveedores import Proveedores
 from src.models import session
 from src.utils.pagination import paginate_query
 
+
 class ProveedoresController:
 
     @staticmethod
     def get(empresa_id=None):
-        query = Proveedores.get_query()
-        if empresa_id:
-            query = query.filter(Proveedores.id_empresa == int(empresa_id))
-        else:
+        if not empresa_id:
             return []
-        return query.all()
+        return Proveedores.get_query().filter(Proveedores.id_empresa == int(empresa_id)).all()
 
     @staticmethod
     def get_paginated(page=1, per_page=10, empresa_id=None):
@@ -30,8 +28,7 @@ class ProveedoresController:
     def obtener_siguiente_codigo(empresa_id=None):
         eid = int(empresa_id) if empresa_id else 1
         prefix = f"PROV-E{eid}-"
-        query = session.query(Proveedores).filter(Proveedores.id_empresa == eid)
-        proveedores = query.all()
+        proveedores = session.query(Proveedores).filter(Proveedores.id_empresa == eid).all()
         max_num = 0
         for p in proveedores:
             cod = getattr(p, "codigo", None)
@@ -57,24 +54,39 @@ class ProveedoresController:
 
     @staticmethod
     def create(data):
-        proveedor = Proveedores()
-        proveedor.nit = data.get("nit", "")
-        proveedor.nombre = data.get("nombre", "")
-        if hasattr(proveedor, 'contacto'):
-            proveedor.contacto = data.get("contacto", "")
-        proveedor.telefono = data.get("telefono", "")
-        proveedor.direccion = data.get("direccion", "")
-        proveedor.email = data.get("email", "")
-        proveedor.detalle_servicios = data.get("detalle_servicios", "")
-        proveedor.estado = data.get("estado", "Activo")
         emp_id = data.get("id_empresa") or data.get("empresa_id")
-        proveedor.id_empresa = int(emp_id) if emp_id else None
+        if not emp_id:
+            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para registrar un proveedor.")
+        eid = int(emp_id)
 
-        # Generar código correlativo por empresa PROV-E{empresa_id}-{consecutivo:03d}
+        nit = str(data.get("nit") or "").strip()
+        if not nit:
+            raise ValueError("El NIT del proveedor es obligatorio.")
+
+        # Validar unicidad de NIT dentro de la misma empresa
+        dup_nit = session.query(Proveedores).filter(
+            Proveedores.id_empresa == eid,
+            Proveedores.nit == nit
+        ).first()
+        if dup_nit:
+            raise ValueError(f"Ya existe un proveedor con el NIT '{nit}' en esta empresa.")
+
+        proveedor = Proveedores()
+        proveedor.nit = nit
+        proveedor.nombre = str(data.get("nombre") or "").strip()
+        if not proveedor.nombre:
+            raise ValueError("El nombre o razón social del proveedor es obligatorio.")
+        proveedor.contacto = str(data.get("contacto") or "").strip()
+        proveedor.telefono = str(data.get("telefono") or "").strip()
+        proveedor.direccion = str(data.get("direccion") or "").strip()
+        proveedor.email = str(data.get("email") or "").strip()
+        proveedor.detalle_servicios = str(data.get("detalle_servicios") or "").strip()
+        proveedor.estado = data.get("estado", "Activo")
+        proveedor.id_empresa = eid
+
         if data.get("codigo"):
             proveedor.codigo = data.get("codigo")
         else:
-            eid = proveedor.id_empresa or 1
             proveedor.codigo = ProveedoresController.obtener_siguiente_codigo(eid)
 
         proveedor.save()
@@ -85,7 +97,19 @@ class ProveedoresController:
         proveedor = Proveedores.get_by_id(id)
         if proveedor is None:
             return None
-        proveedor.nit = data.get("nit", proveedor.nit)
+
+        if "nit" in data and str(data["nit"]).strip():
+            nuevo_nit = str(data["nit"]).strip()
+            if nuevo_nit != proveedor.nit and proveedor.id_empresa:
+                dup = session.query(Proveedores).filter(
+                    Proveedores.id_empresa == proveedor.id_empresa,
+                    Proveedores.nit == nuevo_nit,
+                    Proveedores.id != proveedor.id
+                ).first()
+                if dup:
+                    raise ValueError(f"Ya existe otro proveedor con el NIT '{nuevo_nit}' en esta empresa.")
+            proveedor.nit = nuevo_nit
+
         proveedor.nombre = data.get("nombre", proveedor.nombre)
         if hasattr(proveedor, 'contacto'):
             proveedor.contacto = data.get("contacto", getattr(proveedor, 'contacto', ''))
@@ -110,11 +134,8 @@ class ProveedoresController:
     @staticmethod
     def delete(id):
         proveedor = Proveedores.get_by_id(id)
-
         if proveedor is None:
             return False
-
-        # Desactivación lógica (Soft-Delete) para proteger historial de compras
         proveedor.estado = "Inactivo"
         proveedor.update()
         return True

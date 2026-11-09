@@ -1,12 +1,13 @@
 from sqlalchemy import Column, DateTime, Integer, String
 from src.models import Base, session
-from datetime import date, datetime
+from datetime import datetime
+
 
 class Clientes(Base):
     __tablename__ = 'clientes'
- 
+
     id = Column(Integer, primary_key=True)
-    documento = Column(String(50), nullable=False)
+    documento = Column(String(50), nullable=False, index=True)
     tipo_documento = Column(String(20), default='CC', nullable=True)
     nombre = Column(String(100), nullable=False)
     apellido = Column(String(100), nullable=True)
@@ -15,10 +16,8 @@ class Clientes(Base):
     telefono = Column(String(20), nullable=False)
     email = Column(String(255), nullable=False)
     estado = Column(String(20), default='Activo', nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow) 
+    created_at = Column(DateTime, default=datetime.utcnow)
     # OBSOLETO (PCI-DSS): columnas de tarjeta conservadas solo por compatibilidad con bases de datos existentes.
-    # Su contenido se borra en src/utils/migrations.py y la API ya no las lee, escribe ni devuelve.
-    # Los cobros con tarjeta se hacen en el datáfono (Bold) o en el checkout de la pasarela (Wompi).
     tiene_tarjeta = Column(String(5), default='No')
     tipo_tarjeta = Column(String(50))
     banco_tarjeta = Column(String(100))
@@ -28,7 +27,7 @@ class Clientes(Base):
     titular_tarjeta = Column(String(100))
     fecha_expiracion = Column(String(10))
     cvc_tarjeta = Column(String(10))
-    id_empresa = Column(Integer, nullable=True)
+    id_empresa = Column(Integer, nullable=True, index=True)
 
     def save(self):
         session.add(self)
@@ -51,37 +50,24 @@ class Clientes(Base):
         if not documento:
             return None
         doc_str = str(documento).strip()
-        if empresa_id:
+        if empresa_id is not None:
             try:
                 eid = int(empresa_id)
             except (ValueError, TypeError):
-                eid = 1
-            c = session.query(Clientes).filter(
+                return None
+            return session.query(Clientes).filter(
                 (Clientes.documento == doc_str) | (Clientes.documento == f"{doc_str}#E{eid}"),
                 Clientes.id_empresa == eid
             ).first()
-            if c:
-                return c
-            # Solo adoptar registros huérfanos sin empresa asignada (nunca robar clientes de otra empresa)
-            c_orphan = session.query(Clientes).filter(
-                Clientes.documento == doc_str,
-                Clientes.id_empresa == None
-            ).first()
-            if c_orphan:
-                c_orphan.id_empresa = eid
-                c_orphan.estado = "Activo"
-                c_orphan.update()
-                return c_orphan
-            return None
         return session.query(Clientes).filter(Clientes.documento == doc_str).first()
 
     def update(self):
         session.commit()
-    
+
     def delete(self):
         session.delete(self)
         session.commit()
-   
+
     def to_dict(self):
         doc_clean = (self.documento or "").split("#E")[0]
         return {
@@ -95,6 +81,6 @@ class Clientes(Base):
             "telefono": self.telefono,
             "email": self.email,
             "estado": getattr(self, "estado", "Activo") or "Activo",
-            "created_at": self.created_at,
+            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if hasattr(self.created_at, "strftime") else self.created_at,
             "id_empresa": getattr(self, "id_empresa", None)
         }

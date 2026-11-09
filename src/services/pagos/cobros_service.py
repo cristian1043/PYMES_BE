@@ -1,8 +1,8 @@
 """
-Orquestador de cobros: crea transacciones, aplica estados confirmados por la pasarela,
-procesa webhooks y concilia cobros pendientes.
+Orquestador de cobros: crea transacciones para Facturas y Pedidos del Portal de Clientes,
+aplica estados confirmados por la pasarela, procesa webhooks y concilia cobros pendientes.
 
-Regla de oro: una factura con método de pago integrado solo pasa a 'Pagada'
+Regla de oro: una factura o pedido con método de pago integrado solo pasa a 'Pagada'/'Pagado'
 cuando la pasarela confirma el pago (webhook verificado, consulta a la API o simulación en sandbox).
 """
 import json
@@ -13,12 +13,14 @@ from datetime import datetime, timedelta
 
 from src.models import session
 from src.models.facturas import Facturas
+from src.models.pedidos import Pedidos, HistorialPedidos
+from src.models.notificaciones import Notificaciones
 from src.models.metodos_pago import MetodosPago
 from src.models.terminales import Terminales
 from src.models.transacciones_pago import TransaccionesPago
 from src.services.pagos import CANALES, obtener_proveedor, wompi, bold
 from src.services.pagos.base import (
-    ErrorPasarela, PENDIENTE, APROBADA, RECHAZADA, ANULADA, ERROR, EXPIRADA, resumen_payload,
+    ErrorPasarela, PENDIENTE, APROBADA, RECHAZADA, ANULADA, ERROR, EXPIRADA,
 )
 
 ESTADOS_SIMULABLES = (APROBADA, RECHAZADA)
@@ -35,12 +37,8 @@ def _minutos_expiracion():
         return 30
 
 
-def _nueva_referencia(factura_id):
-    return f"PYM{factura_id}-{int(time.time())}-{secrets.token_hex(3).upper()}"
-
-
-def _metodo_accesible(metodo, id_empresa):
-    return metodo and (metodo.id_empresa is None or int(metodo.id_empresa) == int(id_empresa or 0))
+def _nueva_referencia(prefijo, doc_id):
+    return f"{prefijo}{doc_id}-{int(time.time())}-{secrets.token_hex(3).upper()}"
 
 
 class CobrosService:
@@ -55,14 +53,27 @@ class CobrosService:
                 .order_by(TransaccionesPago.id.desc()).all())
 
     @staticmethod
+    def listar_por_pedido(pedido_id):
+        return (TransaccionesPago.get_query()
+                .filter(TransaccionesPago.id_pedido == int(pedido_id))
+                .order_by(TransaccionesPago.id.desc()).all())
+
+    @staticmethod
     def pago_confirmado(factura_id):
         return TransaccionesPago.get_query().filter(
             TransaccionesPago.id_factura == int(factura_id),
             TransaccionesPago.estado == APROBADA
         ).first() is not None
 
+    @staticmethod
+    def pago_pedido_confirmado(pedido_id):
+        return TransaccionesPago.get_query().filter(
+            TransaccionesPago.id_pedido == int(pedido_id),
+            TransaccionesPago.estado == APROBADA
+        ).first() is not None
+
     # ------------------------------------------------------------------
-    # Crear cobro
+    # Crear cobro para Factura
     # ------------------------------------------------------------------
     @staticmethod
     def crear_cobro(factura_id, data, id_usuario=None, base_url=None):
@@ -87,12 +98,6 @@ class CobrosService:
             pendiente.mensaje = "Reemplazado automáticamente por un nuevo intento de cobro."
             pendiente.update()
 
-        try:
-            from src.utils.migrations import DatabaseMigrations
-            DatabaseMigrations.asegurar_esquema_y_datos(empresa_id=factura.id_empresa or 1)
-        except Exception:
-            pass
-
         canal = str(data.get("canal") or "").strip().lower()
         if canal not in CANALES:
             if data.get("id_terminal") or str(data.get("modo_cobro") or "").lower() == "terminal":
@@ -110,11 +115,7 @@ class CobrosService:
                     (Terminales.estado == "Activo") | (Terminales.estado == None)
                 ).first()
             if not terminal:
-                terminal = Terminales.get_query().filter(
-                    (Terminales.estado == "Activo") | (Terminales.estado == None)
-                ).first()
-            if not terminal:
-                raise ErrorCobro("Selecciona una terminal de pago activa.")
+                raise ErrorCobro("Selecciona una terminal de pago activa para esta empresa.")
             metodo = MetodosPago.get_by_id(terminal.id_metodo_pago)
         else:
             id_metodo = data.get("id_metodo_pago")
@@ -122,13 +123,22 @@ class CobrosService:
             if not metodo or (metodo.pasarela or "").lower() not in CANALES["link"]:
                 metodo = MetodosPago.get_query().filter(
                     MetodosPago.pasarela.in_(["wompi", "simulado"]),
-                    (MetodosPago.tipo == "Pasarela") | (MetodosPago.pasarela == "wompi")
-                ).first() or MetodosPago.get_query().filter(
-                    MetodosPago.pasarela.in_(["wompi", "simulado"])
+                    (MetodosPago.id_empresa == factura.id_empresa) | (MetodosPago.id_empresa == None)
                 ).first()
 
         if not metodo:
-            raise ErrorCobro("El método de pago no está disponible para esta empresa.")
+            # Si no hay método de pasarela configurado, crear/usar un método simulado sandbox seguro
+            metodo = MetodosPago(
+                nombre="Pasarela Online (Sandbox)",
+                descripcion="Pago en línea simulado / sandbox",
+                tipo="link_pago",
+                pasarela="simulado",
+                activo=1,
+                id_empresa=factura.id_empresa
+            )
+            session.add(metodo)
+            session.commit()
+
         proveedor_nombre = (metodo.pasarela or "simulado").lower()
         if proveedor_nombre not in CANALES[canal]:
             proveedor_nombre = "simulado"
@@ -136,13 +146,14 @@ class CobrosService:
 
         tx = TransaccionesPago()
         tx.id_factura = factura.id
+        tx.id_pedido = None
         tx.id_empresa = factura.id_empresa
         tx.id_terminal = terminal.id if terminal else None
         tx.id_metodo_pago = metodo.id
         tx.id_usuario = id_usuario
         tx.canal = canal
         tx.proveedor = proveedor_nombre
-        tx.referencia = _nueva_referencia(factura.id)
+        tx.referencia = _nueva_referencia("PYM", factura.id)
         tx.monto = round(total, 2)
         tx.monto_centavos = int(round(total * 100))
         tx.moneda = "COP"
@@ -173,24 +184,121 @@ class CobrosService:
         except ErrorPasarela as e:
             tx.estado = ERROR
             tx.mensaje = str(e)[:255]
-        except Exception as e:  # nunca dejar la transacción colgada en PENDIENTE por un fallo inesperado
+        except Exception as e:
             tx.estado = ERROR
             tx.mensaje = f"Error inesperado al crear el cobro: {e}"[:255]
         tx.update()
         return tx, factura
 
     # ------------------------------------------------------------------
-    # Aplicar estado (idempotente)
+    # Crear cobro para Pedido del Portal de Clientes
+    # ------------------------------------------------------------------
+    @staticmethod
+    def crear_cobro_pedido(pedido_id, data=None, id_usuario=None, base_url=None):
+        data = data or {}
+        pedido = Pedidos.get_by_id(pedido_id)
+        if not pedido:
+            raise ErrorCobro("Pedido no encontrado.")
+        if (pedido.estado_pago or "") == "Pagado":
+            raise ErrorCobro("El pedido ya se encuentra pagado.")
+        if (pedido.estado or "") == "Cancelado":
+            raise ErrorCobro("No se puede iniciar cobro para un pedido cancelado.")
+
+        total = float(pedido.total or 0)
+        if total <= 0:
+            raise ErrorCobro("El total del pedido debe ser mayor a cero para cobrarlo.")
+
+        pendiente = TransaccionesPago.get_query().filter(
+            TransaccionesPago.id_pedido == pedido.id,
+            TransaccionesPago.estado == PENDIENTE
+        ).first()
+        if pendiente:
+            pendiente.estado = ANULADA
+            pendiente.mensaje = "Reemplazado automáticamente por un nuevo intento de cobro del pedido."
+            pendiente.update()
+
+        id_metodo = data.get("id_metodo_pago") or pedido.id_metodo_pago
+        metodo = MetodosPago.get_by_id(int(id_metodo)) if str(id_metodo or "").isdigit() else None
+        if not metodo or (metodo.pasarela or "").lower() not in CANALES["link"]:
+            metodo = MetodosPago.get_query().filter(
+                MetodosPago.pasarela.in_(["wompi", "simulado"]),
+                (MetodosPago.id_empresa == pedido.id_empresa) | (MetodosPago.id_empresa == None)
+            ).first()
+
+        if not metodo:
+            metodo = MetodosPago(
+                nombre="Pasarela Online (Sandbox)",
+                descripcion="Pago en línea del Portal de Clientes",
+                tipo="link_pago",
+                pasarela="simulado",
+                activo=1,
+                id_empresa=pedido.id_empresa
+            )
+            session.add(metodo)
+            session.commit()
+
+        proveedor_nombre = (metodo.pasarela or "simulado").lower()
+        if proveedor_nombre not in CANALES["link"]:
+            proveedor_nombre = "simulado"
+        proveedor = obtener_proveedor(proveedor_nombre)
+
+        tx = TransaccionesPago()
+        tx.id_factura = pedido.id_factura
+        tx.id_pedido = pedido.id
+        tx.id_empresa = pedido.id_empresa
+        tx.id_terminal = None
+        tx.id_metodo_pago = metodo.id
+        tx.id_usuario = id_usuario
+        tx.canal = "link"
+        tx.proveedor = proveedor_nombre
+        tx.referencia = _nueva_referencia("PED", pedido.id)
+        tx.monto = round(total, 2)
+        tx.monto_centavos = int(round(total * 100))
+        tx.moneda = "COP"
+        tx.estado = PENDIENTE
+        tx.create()
+
+        contexto = {}
+        if base_url:
+            contexto["base_url"] = base_url.rstrip("/")
+            contexto["redirect_url"] = f"{base_url.rstrip('/')}/api/webhooks/wompi/retorno?ref={tx.referencia}"
+
+        # Objeto compatible con la firma de proveedor.crear_cobro
+        doc_Adapter = type("DocPedido", (), {
+            "id": pedido.id,
+            "numero": pedido.numero,
+            "total": pedido.total,
+            "id_empresa": pedido.id_empresa,
+            "id_cliente": pedido.id_cliente,
+        })()
+
+        try:
+            res = proveedor.crear_cobro(tx, metodo, terminal=None, factura=doc_Adapter, contexto=contexto)
+            tx.estado = res.estado or PENDIENTE
+            tx.id_externo = res.id_externo or tx.id_externo
+            tx.url_pago = res.url_pago
+            tx.mensaje = (res.mensaje or "")[:255]
+            tx.payload = res.payload
+        except ErrorPasarela as e:
+            tx.estado = ERROR
+            tx.mensaje = str(e)[:255]
+        except Exception as e:
+            tx.estado = ERROR
+            tx.mensaje = f"Error inesperado al crear cobro del pedido: {e}"[:255]
+        tx.update()
+        return tx, pedido
+
+    # ------------------------------------------------------------------
+    # Aplicar estado (idempotente para Facturas y Pedidos)
     # ------------------------------------------------------------------
     @staticmethod
     def aplicar_resultado(tx, res, origen=""):
-        """Aplica un ResultadoPasarela a la transacción y, si corresponde, a la factura."""
+        """Aplica un ResultadoPasarela a la transacción y actualiza la factura y/o el pedido asociado."""
         if res is None or not res.estado:
             return tx
 
         nuevo = res.estado
 
-        # Validaciones de integridad antes de aprobar
         if nuevo == APROBADA:
             if res.referencia and str(res.referencia) != tx.referencia:
                 nuevo = ERROR
@@ -198,20 +306,16 @@ class CobrosService:
             elif res.monto_centavos is not None and int(res.monto_centavos) != int(tx.monto_centavos):
                 nuevo = ERROR
                 res.mensaje = (f"Monto no coincide: pasarela {int(res.monto_centavos) / 100:.2f} vs "
-                               f"factura {tx.monto_centavos / 100:.2f}. Requiere revisión.")
+                               f"registrado {tx.monto_centavos / 100:.2f}. Requiere revisión.")
 
         actual = tx.estado
         if actual == nuevo:
-            # Evento repetido: solo completar datos faltantes
             if res.id_externo and not tx.id_externo:
                 tx.id_externo = res.id_externo
                 tx.update()
             return tx
-        # Un cobro aprobado solo puede pasar a ANULADA (reverso/anulación confirmada por la pasarela)
         if actual == APROBADA and nuevo != ANULADA:
             return tx
-        # Una pendiente no retrocede a pendiente; las finales (no aprobadas) pueden pasar a APROBADA
-        # si la pasarela confirma tarde (p. ej. expiró localmente pero el cliente sí pagó).
         if nuevo == PENDIENTE:
             if res.id_externo and not tx.id_externo:
                 tx.id_externo = res.id_externo
@@ -225,27 +329,74 @@ class CobrosService:
         if res.payload:
             tx.payload = res.payload
 
-        factura = Facturas.get_by_id(tx.id_factura)
-        if factura:
-            if nuevo == APROBADA:
-                if (factura.estado or "") == "Cancelada":
-                    tx.mensaje = ("Pago APROBADO sobre una factura CANCELADA: revisar y gestionar reembolso "
-                                  "o reactivar la factura.")[:255]
-                else:
-                    factura.estado = "Pagada"
-                    factura.pasarela = tx.proveedor
-                    factura.referencia_pago = (tx.id_externo or tx.referencia)[:100]
-                    factura.id_metodo_pago = tx.id_metodo_pago or factura.id_metodo_pago
-            elif nuevo == ANULADA and actual == APROBADA:
-                if (factura.estado or "") == "Pagada" and factura.referencia_pago in (tx.id_externo, tx.referencia):
-                    factura.estado = "Emitida"
-                    factura.referencia_pago = None
+        # 1. Actualizar Factura si existe
+        if tx.id_factura:
+            factura = Facturas.get_by_id(tx.id_factura)
+            if factura:
+                if nuevo == APROBADA:
+                    if (factura.estado or "") == "Cancelada":
+                        tx.mensaje = ("Pago APROBADO sobre una factura CANCELADA: revisar y gestionar reembolso "
+                                      "o reactivar la factura.")[:255]
+                    else:
+                        factura.estado = "Pagada"
+                        factura.pasarela = tx.proveedor
+                        factura.referencia_pago = (tx.id_externo or tx.referencia)[:100]
+                        factura.id_metodo_pago = tx.id_metodo_pago or factura.id_metodo_pago
+                elif nuevo == ANULADA and actual == APROBADA:
+                    if (factura.estado or "") == "Pagada" and factura.referencia_pago in (tx.id_externo, tx.referencia):
+                        factura.estado = "Emitida"
+                        factura.referencia_pago = None
+
+        # 2. Actualizar Pedido del Portal de Clientes si existe
+        if getattr(tx, "id_pedido", None):
+            pedido = Pedidos.get_by_id(tx.id_pedido)
+            if pedido:
+                if nuevo == APROBADA:
+                    pedido.estado_pago = "Pagado"
+                    pedido.pasarela = tx.proveedor
+                    pedido.referencia_pago = (tx.id_externo or tx.referencia)[:100]
+                    if pedido.estado == "Pendiente":
+                        est_ant = pedido.estado
+                        pedido.estado = "Confirmado"
+                        session.add(HistorialPedidos(
+                            id_pedido=pedido.id,
+                            estado_anterior=est_ant,
+                            estado_nuevo="Confirmado",
+                            comentario=f"Pago aprobado automáticamente por pasarela ({tx.proveedor} - ref {tx.referencia})",
+                            actor_tipo="sistema",
+                            created_at=datetime.now()
+                        ))
+                    Notificaciones.registrar(
+                        id_empresa=pedido.id_empresa,
+                        destinatario_tipo="empresa",
+                        tipo="pago",
+                        titulo=f"Pago recibido para pedido {pedido.numero}",
+                        mensaje=f"Se confirmó el pago por ${pedido.total:,.2f} del pedido {pedido.numero} (ref: {tx.referencia}).",
+                        referencia_id=pedido.id,
+                        commit=False
+                    )
+                    if pedido.id_cuenta_cliente:
+                        Notificaciones.registrar(
+                            id_empresa=pedido.id_empresa,
+                            destinatario_tipo="cliente",
+                            id_cuenta_cliente=pedido.id_cuenta_cliente,
+                            tipo="pago",
+                            titulo=f"Pago confirmado - Pedido {pedido.numero}",
+                            mensaje=f"Tu pago por ${pedido.total:,.2f} fue aprobado. Tu pedido está Confirmado.",
+                            referencia_id=pedido.id,
+                            commit=False
+                        )
+                elif nuevo in (RECHAZADA, ERROR):
+                    if pedido.estado_pago != "Pagado":
+                        pedido.estado_pago = "Rechazado"
+                elif nuevo == ANULADA and actual == APROBADA:
+                    pedido.estado_pago = "Reembolsado"
+
         session.commit()
         return tx
 
     @staticmethod
     def refrescar(tx):
-        """Consulta la pasarela si el cobro sigue pendiente (no aplica a todos los proveedores)."""
         if tx.estado != PENDIENTE:
             return tx
         metodo = MetodosPago.get_by_id(tx.id_metodo_pago) if tx.id_metodo_pago else None
@@ -254,11 +405,7 @@ class CobrosService:
         try:
             proveedor = obtener_proveedor(tx.proveedor)
             res = proveedor.consultar(tx, metodo)
-        except ErrorPasarela as e:
-            print(f"[cobros] No se pudo consultar el cobro {tx.referencia}: {e}")
-            return tx
-        except Exception as e:
-            print(f"[cobros] Error inesperado consultando el cobro {tx.referencia}: {e}")
+        except Exception:
             return tx
         return CobrosService.aplicar_resultado(tx, res, origen="consulta")
 
@@ -282,7 +429,7 @@ class CobrosService:
         metodo = MetodosPago.get_by_id(tx.id_metodo_pago) if tx.id_metodo_pago else None
         es_sandbox = (
             (tx.proveedor or "").lower() == "simulado"
-            or (metodo is not None and (metodo.modo or "sandbox").lower() == "sandbox")
+            or (metodo is not None and (getattr(metodo, "modo", "sandbox") or "sandbox").lower() == "sandbox")
         )
         if not es_sandbox:
             raise ErrorCobro("La simulación de pago solo está permitida en modo sandbox o proveedor simulado.")
@@ -319,7 +466,6 @@ class CobrosService:
             tx = PagosMembresia.get_by_referencia(referencia)
             es_membresia = tx is not None
         if not tx:
-            # Evento de una transacción que no es nuestra: responder 200 para que Wompi no reintente.
             return 200, "Referencia desconocida (ignorado)"
         metodo = MetodosPago.get_by_id(tx.id_metodo_pago)
         if not metodo or not wompi.verificar_webhook(evento, headers, metodo):
@@ -358,7 +504,6 @@ class CobrosService:
 
     @staticmethod
     def procesar_retorno_wompi(referencia, id_transaccion):
-        """El cliente regresa del checkout de Wompi (?id=...). Se guarda el ID y se consulta el estado real."""
         tx = TransaccionesPago.get_by_referencia(referencia)
         es_membresia = False
         if not tx and referencia:
@@ -375,9 +520,6 @@ class CobrosService:
             return MembresiasService.refrescar(tx)
         return CobrosService.refrescar(tx)
 
-    # ------------------------------------------------------------------
-    # Conciliación (la ejecuta la tarea programada)
-    # ------------------------------------------------------------------
     @staticmethod
     def conciliar(minutos_expiracion=None, horas_facturas_sin_pago=24, id_empresa=None):
         minutos = minutos_expiracion or _minutos_expiracion()
@@ -397,12 +539,10 @@ class CobrosService:
             CobrosService.refrescar(tx)
             if tx.estado == PENDIENTE and tx.created_at and tx.created_at < limite:
                 tx.estado = EXPIRADA
-                tx.mensaje = (f"Sin confirmación después de {minutos} min. "
-                              + ("Verifica en el panel de Bold si el datáfono registró el pago."
-                                 if tx.proveedor == "bold" else "Verifica en el panel de la pasarela."))[:255]
+                tx.mensaje = f"Sin confirmación después de {minutos} min."[:255]
                 tx.update()
-            item = {"id": tx.id, "id_factura": tx.id_factura, "referencia": tx.referencia,
-                    "proveedor": tx.proveedor, "monto": tx.monto, "estado": tx.estado}
+            item = {"id": tx.id, "id_factura": tx.id_factura, "id_pedido": getattr(tx, "id_pedido", None),
+                    "referencia": tx.referencia, "proveedor": tx.proveedor, "monto": tx.monto, "estado": tx.estado}
             if tx.estado == APROBADA:
                 resumen["aprobadas"].append(item)
             elif tx.estado in (RECHAZADA, ERROR, ANULADA):
@@ -412,7 +552,6 @@ class CobrosService:
             else:
                 resumen["siguen_pendientes"].append(item)
 
-        # Facturas emitidas hace más de N horas sin pago confirmado
         limite_facturas = ahora - timedelta(hours=horas_facturas_sin_pago)
         qf = Facturas.get_query().filter(Facturas.estado == "Emitida", Facturas.fecha < limite_facturas)
         if id_empresa:
@@ -422,7 +561,6 @@ class CobrosService:
                 "id": f.id, "numero": f.numero, "fecha": f.fecha.strftime('%Y-%m-%d %H:%M') if f.fecha else None,
                 "total": f.total, "id_empresa": f.id_empresa})
 
-        # Alertas: pagos aprobados sobre facturas canceladas o con montos que no cuadran
         qa = TransaccionesPago.get_query().filter(TransaccionesPago.updated_at >= ahora - timedelta(days=7))
         if id_empresa:
             qa = qa.filter(TransaccionesPago.id_empresa == int(id_empresa))

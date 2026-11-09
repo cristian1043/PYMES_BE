@@ -1,370 +1,226 @@
-from sqlalchemy import text
-from src.models import engine
+from datetime import datetime
+from sqlalchemy import text, inspect
+from src.models import engine, Base, session
+
 
 class DatabaseMigrations:
     """
-    Módulo exclusivo para la gestión y actualización del esquema de tablas en la base de datos MySQL (SRP).
+    Gestor de migraciones de esquema versionadas y no destructivas (compatible con MySQL y SQLite).
+    - Registra cada migración aplicada en la tabla `schema_migrations`.
+    - Nunca ejecuta actualizaciones masivas destructivas ni asigna `id_empresa = 1` automáticamente
+      durante el arranque normal del servidor.
     """
-    _esquema_verificado = False
+
+    MIGRACIONES = [
+        ("2026_01_base_tables", "Creación de tablas base y tablas del Portal de Clientes"),
+        ("2026_02_empresas_multitenant", "Adición de razon_social, created_at y campos de membresía en empresas"),
+        ("2026_03_usuarios_superadmin", "Adición de es_super_admin, sesion_version y foto en usuarios"),
+        ("2026_04_categorias_multitenant", "Adición de id_empresa, descripcion y estado en categorias"),
+        ("2026_05_productos_portal", "Adición de campos de publicación del Portal de Clientes en productos"),
+        ("2026_06_transacciones_pedidos", "Soporte de id_pedido y anulabilidad de id_factura en transacciones_pago"),
+        ("2026_07_catalogos_base", "Semilla no destructiva de roles y métodos de pago estándar"),
+    ]
 
     @staticmethod
-    def asegurar_esquema_y_datos(empresa_id=None):
-        """Garantiza en caliente que las tablas, columnas y semillas de métodos/terminales existan."""
-        if not DatabaseMigrations._esquema_verificado:
-            DatabaseMigrations._esquema_verificado = True
-            try:
-                from src.models import Base
-                Base.metadata.create_all(bind=engine)
-            except Exception:
-                pass
-            DatabaseMigrations.ejecutar_migraciones()
-        else:
-            DatabaseMigrations._sembrar_pasarelas_y_terminales(empresa_id=empresa_id)
+    def _asegurar_tabla_versiones():
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version VARCHAR(80) PRIMARY KEY,
+                    descripcion VARCHAR(255) NOT NULL,
+                    applied_at VARCHAR(40) NOT NULL
+                )
+            """))
+            conn.commit()
+
+    @staticmethod
+    def obtener_migraciones_aplicadas():
+        DatabaseMigrations._asegurar_tabla_versiones()
+        with engine.connect() as conn:
+            rows = conn.execute(text("SELECT version, descripcion, applied_at FROM schema_migrations ORDER BY version ASC")).fetchall()
+            return [{"version": r[0], "descripcion": r[1], "applied_at": r[2]} for r in rows]
+
+    @staticmethod
+    def _registrar_version(version, descripcion):
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with engine.connect() as conn:
+            existe = conn.execute(
+                text("SELECT version FROM schema_migrations WHERE version = :v"),
+                {"v": version}
+            ).fetchone()
+            if not existe:
+                conn.execute(
+                    text("INSERT INTO schema_migrations (version, descripcion, applied_at) VALUES (:v, :d, :a)"),
+                    {"v": version, "d": descripcion, "a": ahora}
+                )
+                conn.commit()
 
     @staticmethod
     def ejecutar_migraciones():
-        """Verifica y aplica columnas faltantes en las tablas de MySQL."""
+        """Ejecuta migraciones estructurales seguras e idempotentes al iniciar la aplicación."""
         try:
+            DatabaseMigrations._asegurar_tabla_versiones()
+            Base.metadata.create_all(engine)
+
+            inspector = inspect(engine)
+            tablas = inspector.get_table_names()
+
             with engine.connect() as conn:
-                # Columnas adicionales para la tabla usuarios
-                columnas_usuarios = [
-                    "ALTER TABLE usuarios ADD COLUMN username VARCHAR(50) UNIQUE",
-                    "ALTER TABLE usuarios ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
-                    "ALTER TABLE usuarios ADD COLUMN banco VARCHAR(100)",
-                    "ALTER TABLE usuarios ADD COLUMN tipo_cuenta VARCHAR(50)",
-                    "ALTER TABLE usuarios ADD COLUMN numero_cuenta VARCHAR(50)",
-                    "ALTER TABLE usuarios ADD COLUMN fecha_nacimiento VARCHAR(20)",
-                    "ALTER TABLE usuarios ADD COLUMN lugar_residencia VARCHAR(200)",
-                    "ALTER TABLE usuarios ADD COLUMN estado_civil VARCHAR(50)",
-                    "ALTER TABLE usuarios ADD COLUMN sesion_version INT DEFAULT 1",
-                    "ALTER TABLE usuarios ADD COLUMN foto TEXT"
-                ]
-                for query in columnas_usuarios:
+                def add_col(tabla, col, tipo):
+                    if tabla not in tablas:
+                        return
+                    cols_actuales = [c["name"] for c in inspector.get_columns(tabla)]
+                    if col not in cols_actuales:
+                        try:
+                            conn.execute(text(f"ALTER TABLE {tabla} ADD COLUMN {col} {tipo}"))
+                            conn.commit()
+                        except Exception:
+                            pass
+
+                # 1. Empresas
+                add_col("empresas", "razon_social", "VARCHAR(200) NULL")
+                add_col("empresas", "created_at", "DATETIME NULL")
+                add_col("empresas", "plan_membresia", "VARCHAR(60) DEFAULT 'Plan PYME Mensual'")
+                add_col("empresas", "precio_membresia", "FLOAT DEFAULT 19900.0")
+                add_col("empresas", "estado_membresia", "VARCHAR(30) DEFAULT 'Activa'")
+                add_col("empresas", "fecha_inicio_membresia", "DATETIME NULL")
+                add_col("empresas", "fecha_vencimiento_membresia", "DATETIME NULL")
+                add_col("empresas", "auto_renovacion", "INTEGER DEFAULT 1")
+
+                # 2. Usuarios
+                add_col("usuarios", "username", "VARCHAR(50) NULL")
+                add_col("usuarios", "banco", "VARCHAR(100) NULL")
+                add_col("usuarios", "tipo_cuenta", "VARCHAR(50) NULL")
+                add_col("usuarios", "numero_cuenta", "VARCHAR(50) NULL")
+                add_col("usuarios", "fecha_nacimiento", "VARCHAR(20) NULL")
+                add_col("usuarios", "lugar_residencia", "VARCHAR(200) NULL")
+                add_col("usuarios", "estado_civil", "VARCHAR(50) NULL")
+                add_col("usuarios", "numero_hijos", "INTEGER DEFAULT 0")
+                add_col("usuarios", "sesion_version", "INTEGER DEFAULT 1")
+                add_col("usuarios", "foto", "LONGTEXT NULL")
+                add_col("usuarios", "es_super_admin", "INTEGER DEFAULT 0")
+
+                # 3. Categorías multi-empresa
+                add_col("categorias", "descripcion", "VARCHAR(255) NULL")
+                add_col("categorias", "estado", "VARCHAR(20) DEFAULT 'Activo'")
+                add_col("categorias", "id_empresa", "INTEGER NULL")
+
+                # 4. Clientes
+                add_col("clientes", "apellido", "VARCHAR(100) DEFAULT ''")
+                add_col("clientes", "codigo", "VARCHAR(50) NULL")
+                add_col("clientes", "tipo_documento", "VARCHAR(20) DEFAULT 'CC'")
+                add_col("clientes", "estado", "VARCHAR(20) DEFAULT 'Activo'")
+                add_col("clientes", "id_empresa", "INTEGER NULL")
+
+                # 5. Proveedores
+                add_col("proveedores", "codigo", "VARCHAR(50) NULL")
+                add_col("proveedores", "contacto", "VARCHAR(100) DEFAULT ''")
+                add_col("proveedores", "estado", "VARCHAR(20) DEFAULT 'Activo'")
+                add_col("proveedores", "id_empresa", "INTEGER NULL")
+
+                # 6. Productos (incluyendo campos de Portal de Clientes)
+                add_col("productos", "id_proveedor", "INTEGER NULL")
+                add_col("productos", "costo", "FLOAT DEFAULT 0.0")
+                add_col("productos", "estado", "VARCHAR(20) DEFAULT 'Activo'")
+                add_col("productos", "imagen", "LONGTEXT NULL")
+                add_col("productos", "id_empresa", "INTEGER NULL")
+                add_col("productos", "publicado_portal", "INTEGER DEFAULT 1")
+                add_col("productos", "descripcion_publica", "VARCHAR(500) NULL")
+                add_col("productos", "imagen_publica", "LONGTEXT NULL")
+                add_col("productos", "destacado", "INTEGER DEFAULT 0")
+                add_col("productos", "precio_publico", "FLOAT NULL")
+                add_col("productos", "disponible_portal", "INTEGER DEFAULT 1")
+
+                # 7. Facturas y Compras
+                add_col("facturas", "estado", "VARCHAR(20) DEFAULT 'Emitida'")
+                add_col("facturas", "id_empresa", "INTEGER NULL")
+                add_col("facturas", "pasarela", "VARCHAR(50) NULL")
+                add_col("facturas", "referencia_pago", "VARCHAR(100) NULL")
+
+                add_col("compras", "estado", "VARCHAR(20) DEFAULT 'Completada'")
+                add_col("compras", "id_empresa", "INTEGER NULL")
+                add_col("compras", "id_metodo_pago", "INTEGER DEFAULT 1")
+                add_col("compras", "metodo_pago", "VARCHAR(100) DEFAULT 'Efectivo'")
+                add_col("compras", "referencia_pago", "VARCHAR(100) NULL")
+
+                # 8. Métodos de pago y Transacciones de pago
+                add_col("metodos_pago", "tipo", "VARCHAR(30) DEFAULT 'manual'")
+                add_col("metodos_pago", "pasarela", "VARCHAR(30) NULL")
+                add_col("metodos_pago", "id_terminal_defecto", "INTEGER NULL")
+                add_col("metodos_pago", "id_empresa", "INTEGER NULL")
+                add_col("metodos_pago", "activo", "INTEGER DEFAULT 1")
+
+                add_col("transacciones_pago", "id_pedido", "INTEGER NULL")
+
+                # En MySQL permitir que id_factura sea NULL cuando el pago corresponde a un pedido del portal
+                if "mysql" in str(engine.url):
                     try:
-                        conn.execute(text(query))
+                        conn.execute(text("ALTER TABLE transacciones_pago MODIFY COLUMN id_factura INTEGER NULL"))
                         conn.commit()
                     except Exception:
                         pass
 
-                # Columnas adicionales para la tabla empresas
-                columnas_empresas = [
-                    "ALTER TABLE empresas ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
-                    "ALTER TABLE empresas ADD COLUMN plan_membresia VARCHAR(60) DEFAULT 'Plan PYME Mensual'",
-                    "ALTER TABLE empresas ADD COLUMN precio_membresia FLOAT DEFAULT 19900.0",
-                    "ALTER TABLE empresas ADD COLUMN estado_membresia VARCHAR(30) DEFAULT 'Activa'",
-                    "ALTER TABLE empresas ADD COLUMN fecha_inicio_membresia DATETIME",
-                    "ALTER TABLE empresas ADD COLUMN fecha_vencimiento_membresia DATETIME",
-                    "ALTER TABLE empresas ADD COLUMN auto_renovacion INT DEFAULT 1"
-                ]
-                for query in columnas_empresas:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
+            DatabaseMigrations._sembrar_catalogos_base()
 
-                # Columnas adicionales para la tabla facturas
-                columnas_facturas = [
-                    "ALTER TABLE facturas ADD COLUMN estado VARCHAR(20) DEFAULT 'Emitida'",
-                    "ALTER TABLE facturas ADD COLUMN id_empresa INT",
-                    "ALTER TABLE facturas ADD COLUMN pasarela VARCHAR(50)",
-                    "ALTER TABLE facturas ADD COLUMN referencia_pago VARCHAR(100)"
-                ]
-                for query in columnas_facturas:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
+            for ver, desc in DatabaseMigrations.MIGRACIONES:
+                DatabaseMigrations._registrar_version(ver, desc)
 
-                # Columnas adicionales para la tabla productos
-                columnas_productos = [
-                    "ALTER TABLE productos ADD COLUMN id_proveedor INT",
-                    "ALTER TABLE productos ADD COLUMN costo FLOAT DEFAULT 0.0",
-                    "ALTER TABLE productos ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
-                    "ALTER TABLE productos ADD COLUMN imagen TEXT",
-                    "ALTER TABLE productos ADD COLUMN id_empresa INT"
-                ]
-                for query in columnas_productos:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
-
-                # Columnas adicionales para la tabla clientes
-                columnas_clientes = [
-                    "ALTER TABLE clientes ADD COLUMN apellido VARCHAR(100)",
-                    "ALTER TABLE clientes ADD COLUMN codigo VARCHAR(50)",
-                    "ALTER TABLE clientes ADD COLUMN tipo_documento VARCHAR(20) DEFAULT 'CC'",
-                    "ALTER TABLE clientes ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
-                    "ALTER TABLE clientes ADD COLUMN tiene_tarjeta VARCHAR(5) DEFAULT 'No'",
-                    "ALTER TABLE clientes ADD COLUMN tipo_tarjeta VARCHAR(50)",
-                    "ALTER TABLE clientes ADD COLUMN banco_tarjeta VARCHAR(100)",
-                    "ALTER TABLE clientes ADD COLUMN franquicia_tarjeta VARCHAR(50)",
-                    "ALTER TABLE clientes ADD COLUMN ultimos_digitos_tarjeta VARCHAR(4)",
-                    "ALTER TABLE clientes ADD COLUMN numero_tarjeta VARCHAR(20)",
-                    "ALTER TABLE clientes ADD COLUMN titular_tarjeta VARCHAR(100)",
-                    "ALTER TABLE clientes ADD COLUMN fecha_expiracion VARCHAR(10)",
-                    "ALTER TABLE clientes ADD COLUMN cvc_tarjeta VARCHAR(10)",
-                    "ALTER TABLE clientes ADD COLUMN id_empresa INT"
-                ]
-                for query in columnas_clientes:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
-
-                # Columnas adicionales para la tabla proveedores
-                columnas_proveedores = [
-                    "ALTER TABLE proveedores ADD COLUMN codigo VARCHAR(50)",
-                    "ALTER TABLE proveedores ADD COLUMN contacto VARCHAR(100)",
-                    "ALTER TABLE proveedores ADD COLUMN detalle_servicios VARCHAR(500)",
-                    "ALTER TABLE proveedores ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
-                    "ALTER TABLE proveedores ADD COLUMN id_empresa INT"
-                ]
-                for query in columnas_proveedores:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
-
-                # Columnas adicionales para la tabla compras
-                columnas_compras = [
-                    "ALTER TABLE compras ADD COLUMN numero VARCHAR(50)",
-                    "ALTER TABLE compras ADD COLUMN estado VARCHAR(20) DEFAULT 'Completada'",
-                    "ALTER TABLE compras ADD COLUMN id_empresa INT",
-                    "ALTER TABLE compras ADD COLUMN id_metodo_pago INT DEFAULT 1",
-                    "ALTER TABLE compras ADD COLUMN metodo_pago VARCHAR(100) DEFAULT 'Efectivo'",
-                    "ALTER TABLE compras ADD COLUMN referencia_pago VARCHAR(100)",
-                    "ALTER TABLE movimientos_inventario ADD COLUMN id_empresa INT"
-                ]
-                for query in columnas_compras:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
-
-                # Columnas de integración con pasarelas para la tabla metodos_pago
-                # (bases de datos creadas antes de que existieran estos campos)
-                columnas_metodos_pago = [
-                    "ALTER TABLE metodos_pago ADD COLUMN pasarela VARCHAR(50) DEFAULT 'ninguna'",
-                    "ALTER TABLE metodos_pago ADD COLUMN api_key_publica VARCHAR(255)",
-                    "ALTER TABLE metodos_pago ADD COLUMN api_key_privada VARCHAR(255)",
-                    "ALTER TABLE metodos_pago ADD COLUMN webhook_secret VARCHAR(255)",
-                    "ALTER TABLE metodos_pago ADD COLUMN integrity_secret VARCHAR(255)",
-                    "ALTER TABLE metodos_pago ADD COLUMN modo VARCHAR(20) DEFAULT 'sandbox'"
-                ]
-                for query in columnas_metodos_pago:
-                    try:
-                        conn.execute(text(query))
-                        conn.commit()
-                    except Exception:
-                        pass
-
-                # Seguridad PCI-DSS: eliminar cualquier dato de tarjeta almacenado en clientes.
-                # Las columnas se conservan (sin uso) para no romper bases de datos existentes,
-                # pero su contenido se borra y la API ya no las lee ni las escribe.
-                try:
-                    conn.execute(text(
-                        "UPDATE clientes SET numero_tarjeta = NULL, cvc_tarjeta = NULL, fecha_expiracion = NULL, "
-                        "titular_tarjeta = NULL, ultimos_digitos_tarjeta = NULL, franquicia_tarjeta = NULL, "
-                        "banco_tarjeta = NULL, tipo_tarjeta = NULL, tiene_tarjeta = 'No' "
-                        "WHERE numero_tarjeta IS NOT NULL OR cvc_tarjeta IS NOT NULL OR fecha_expiracion IS NOT NULL "
-                        "OR titular_tarjeta IS NOT NULL OR ultimos_digitos_tarjeta IS NOT NULL OR franquicia_tarjeta IS NOT NULL "
-                        "OR banco_tarjeta IS NOT NULL OR tipo_tarjeta IS NOT NULL OR (tiene_tarjeta IS NOT NULL AND tiene_tarjeta <> 'No')"
-                    ))
-                    conn.commit()
-                except Exception:
-                    pass
-
-                # Reparación y saneamiento automático de registros huérfanos sin id_empresa
-                reparaciones = [
-                    "UPDATE clientes SET id_empresa = 1 WHERE id_empresa IS NULL",
-                    "UPDATE facturas SET id_empresa = 1 WHERE id_empresa IS NULL",
-                    "UPDATE proveedores SET id_empresa = 1 WHERE id_empresa IS NULL",
-                    "UPDATE productos SET id_empresa = 1 WHERE id_empresa IS NULL",
-                    "UPDATE compras SET id_empresa = 1 WHERE id_empresa IS NULL",
-                    "UPDATE compras SET metodo_pago = 'Efectivo' WHERE metodo_pago IS NULL OR metodo_pago = ''",
-                    "UPDATE compras SET id_metodo_pago = 1 WHERE id_metodo_pago IS NULL"
-                ]
-                for rep in reparaciones:
-                    try:
-                        conn.execute(text(rep))
-                        conn.commit()
-                    except Exception:
-                        pass
-
-            # Semilla automática e idempotente de métodos de pago integrados y terminales de pago iniciales
-            DatabaseMigrations._sembrar_pasarelas_y_terminales()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[migrations] Advertencia durante verificación de esquema: {e}")
 
     @staticmethod
-    def _sembrar_pasarelas_y_terminales(empresa_id=None):
-        """
-        Garantiza que existan métodos de pago integrados (Bold, Wompi y modo Simulado para pruebas sin llaves)
-        y terminales de pago (datáfonos) iniciales para que el comercio pueda operar de inmediato.
-        No modifica ni elimina métodos ni terminales ya creados.
-        """
+    def _sembrar_catalogos_base():
+        """Crea únicamente roles y métodos de pago esenciales si no existen (no crea empresas ficticias)."""
         try:
-            from src.models import session, Base
+            from src.models.roles import Roles
             from src.models.metodos_pago import MetodosPago
-            from src.models.terminales import Terminales
-            from src.models.empresas import Empresas
+            from src.models.categorias import Categorias
 
-            try:
-                Base.metadata.create_all(bind=engine)
-            except Exception:
-                pass
-
-            existentes = session.query(MetodosPago).all()
-            # Asegurar que todos los métodos existentes tengan estado y pasarela válidos
-            for m in existentes:
-                if not m.estado:
-                    m.estado = "Activo"
-                if not m.pasarela:
-                    m.pasarela = "ninguna"
-                if not m.modo:
-                    m.modo = "sandbox"
+            roles_base = [
+                (1, "Administrador", "Gestión administrativa de la empresa activa"),
+                (2, "Vendedor", "Operaciones comerciales, ventas, clientes y pedidos"),
+                (3, "Almacenista", "Gestión de inventario, productos, proveedores y compras"),
+            ]
+            for r_id, r_nom, r_desc in roles_base:
+                if not session.query(Roles).filter_by(id=r_id).first():
+                    session.add(Roles(id=r_id, nombre=r_nom, descripcion=r_desc))
             session.commit()
 
-            # 1. Asegurar método Efectivo
-            tiene_efectivo = any((m.tipo or "").lower() == "efectivo" or "efectivo" in (m.nombre or "").lower() for m in existentes)
-            if not tiene_efectivo:
-                session.add(MetodosPago(
-                    nombre="Efectivo",
-                    descripcion="Pago directo en efectivo en caja",
-                    tipo="Efectivo",
-                    pasarela="ninguna",
-                    modo="sandbox",
-                    estado="Activo",
-                    id_empresa=None
-                ))
+            if session.query(MetodosPago).count() == 0:
+                metodos = [
+                    MetodosPago(nombre="Efectivo", descripcion="Pago en efectivo o contraentrega", tipo="manual", activo=1),
+                    MetodosPago(nombre="Tarjeta Débito", descripcion="Cobro con tarjeta débito", tipo="datafono", pasarela="bold", activo=1),
+                    MetodosPago(nombre="Tarjeta Crédito", descripcion="Cobro con tarjeta crédito", tipo="datafono", pasarela="bold", activo=1),
+                    MetodosPago(nombre="Transferencia / PSE", descripcion="Pago electrónico vía link de pasarela", tipo="link_pago", pasarela="wompi", activo=1),
+                ]
+                session.add_all(metodos)
                 session.commit()
 
-            # 2. Asegurar método Transferencia Bancaria / Nequi / Daviplata
-            existentes = session.query(MetodosPago).all()
-            tiene_transf = any((m.tipo or "").lower() == "transferencia" or "transferencia" in (m.nombre or "").lower() for m in existentes)
-            if not tiene_transf:
-                session.add(MetodosPago(
-                    nombre="Transferencia Bancaria / Nequi",
-                    descripcion="Transferencia directa a cuenta bancaria, Nequi o Daviplata",
-                    tipo="Transferencia",
-                    banco="Bancolombia / Nequi / Daviplata",
-                    pasarela="ninguna",
-                    modo="sandbox",
-                    estado="Activo",
-                    id_empresa=None
-                ))
+            if session.query(Categorias).count() == 0:
+                cats = [
+                    Categorias(nombre="General", descripcion="Categoría general de productos", estado="Activo", id_empresa=None),
+                    Categorias(nombre="Tecnología", descripcion="Equipos y accesorios tecnológicos", estado="Activo", id_empresa=None),
+                    Categorias(nombre="Alimentos y Bebidas", descripcion="Productos de consumo", estado="Activo", id_empresa=None),
+                    Categorias(nombre="Hogar y Oficina", descripcion="Artículos para hogar y papelería", estado="Activo", id_empresa=None),
+                ]
+                session.add_all(cats)
                 session.commit()
+        except Exception:
+            session.rollback()
 
-            # 3. Asegurar método Datáfono Bold (Simulado) para cobro con tarjeta en terminal POS
-            existentes = session.query(MetodosPago).all()
-            nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
-            metodo_sim_datafono = next(
-                (m for m in existentes if (m.pasarela or "").lower() in ("simulado", "bold") and (m.tipo or "") == "Tarjeta"),
-                None
-            )
-            if not metodo_sim_datafono and "datáfono bold (simulado)" not in nombres_lower:
-                metodo_sim_datafono = MetodosPago(
-                    nombre="Datáfono Bold (Simulado)",
-                    descripcion="Cobro con tarjeta débito/crédito en terminal física (modo pruebas sin llaves)",
-                    tipo="Tarjeta",
-                    banco="Bold POS",
-                    pasarela="simulado",
-                    modo="sandbox",
-                    estado="Activo",
-                    id_empresa=None
-                )
-                session.add(metodo_sim_datafono)
-                session.commit()
-
-            # 4. Asegurar método Pasarela Wompi / PSE / Nequi (Simulado) para links de pago
-            existentes = session.query(MetodosPago).all()
-            nombres_lower = {(m.nombre or "").strip().lower() for m in existentes}
-            metodo_sim_link = next(
-                (m for m in existentes if (m.pasarela or "").lower() in ("simulado", "wompi") and (m.tipo or "") == "Pasarela"),
-                None
-            )
-            if not metodo_sim_link and "pasarela wompi / pse / nequi (simulado)" not in nombres_lower:
-                metodo_sim_link = MetodosPago(
-                    nombre="Pasarela Wompi / PSE / Nequi (Simulado)",
-                    descripcion="Link de cobro online (PSE, Nequi, QR Bancolombia, Tarjeta) en modo pruebas",
-                    tipo="Pasarela",
-                    banco="Wompi Bancolombia",
-                    pasarela="simulado",
-                    modo="sandbox",
-                    estado="Activo",
-                    id_empresa=None
-                )
-                session.add(metodo_sim_link)
-                session.commit()
-
-            # 5. Si una empresa activa aún no tiene ninguna terminal de pago registrada, crear sus datáfonos iniciales
-            metodo_para_terminal = metodo_sim_datafono or next(
-                (m for m in session.query(MetodosPago).all() if (m.pasarela or "").lower() in ("simulado", "bold")),
-                None
-            )
-            if metodo_para_terminal:
-                ids_empresas = [1]
-                if empresa_id and str(empresa_id).isdigit() and int(empresa_id) not in ids_empresas:
-                    ids_empresas.append(int(empresa_id))
+    @staticmethod
+    def auditar_calidad_datos():
+        """
+        Inspecciona la base de datos e identifica registros huérfanos (`id_empresa IS NULL`)
+        o posibles inconsistencias sin alterar destructivamente los datos comerciales.
+        """
+        reporte = {"huerfanos": {}, "migraciones_aplicadas": DatabaseMigrations.obtener_migraciones_aplicadas()}
+        tablas_tenant = ["clientes", "proveedores", "productos", "facturas", "compras"]
+        with engine.connect() as conn:
+            for t in tablas_tenant:
                 try:
-                    from datetime import datetime, timedelta
-                    ahora = datetime.now()
-                    for emp in session.query(Empresas).all():
-                        if emp.id and int(emp.id) not in ids_empresas:
-                            ids_empresas.append(int(emp.id))
-                        if not emp.plan_membresia:
-                            emp.plan_membresia = "Plan PYME Mensual"
-                        if not emp.precio_membresia:
-                            emp.precio_membresia = 19900.0
-                        if not emp.estado_membresia:
-                            emp.estado_membresia = "Activa"
-                        if not emp.fecha_inicio_membresia:
-                            emp.fecha_inicio_membresia = ahora
-                        if not emp.fecha_vencimiento_membresia:
-                            emp.fecha_vencimiento_membresia = ahora + timedelta(days=30)
-                        if emp.auto_renovacion is None:
-                            emp.auto_renovacion = 1
-                    session.commit()
+                    cnt = conn.execute(text(f"SELECT COUNT(*) FROM {t} WHERE id_empresa IS NULL")).scalar()
+                    reporte["huerfanos"][t] = int(cnt or 0)
                 except Exception:
-                    pass
-
-                for eid in ids_empresas:
-                    tiene_terminales = session.query(Terminales).filter(Terminales.id_empresa == eid).first() is not None
-                    if not tiene_terminales:
-                        t1 = Terminales(
-                            id_empresa=eid,
-                            nombre="Caja Principal - Datáfono 1",
-                            proveedor="simulado",
-                            id_metodo_pago=metodo_para_terminal.id,
-                            terminal_serial=f"SIM-E{eid}-001",
-                            terminal_model="Bold Smart Pro",
-                            email_usuario="caja1@pymesoft.co",
-                            estado="Activo"
-                        )
-                        t2 = Terminales(
-                            id_empresa=eid,
-                            nombre="Caja Auxiliar - Datáfono 2",
-                            proveedor="simulado",
-                            id_metodo_pago=metodo_para_terminal.id,
-                            terminal_serial=f"SIM-E{eid}-002",
-                            terminal_model="Bold Smart",
-                            email_usuario="caja2@pymesoft.co",
-                            estado="Activo"
-                        )
-                        session.add(t1)
-                        session.add(t2)
-                session.commit()
-        except Exception as e:
-            try:
-                from src.models import session
-                session.rollback()
-            except Exception:
-                pass
-            print(f"[migrations] Aviso al sembrar pasarelas/terminales: {e}")
+                    reporte["huerfanos"][t] = 0
+        return reporte

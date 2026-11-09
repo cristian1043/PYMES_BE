@@ -10,7 +10,7 @@ class Compras(Base):
     __tablename__ = 'compras'
 
     id = Column(Integer, primary_key=True)
-    numero = Column(String(50), unique=True, nullable=False)
+    numero = Column(String(50), nullable=False, index=True)
     fecha = Column(DateTime, default=datetime.now, nullable=False)
     subtotal = Column(Float, nullable=False)
     iva = Column(Float, nullable=False)

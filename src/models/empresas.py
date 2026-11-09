@@ -12,11 +12,13 @@ class Empresas(Base):
 
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100), nullable=False)
+    razon_social = Column(String(200), nullable=True)
     nit = Column(String(20), unique=True, nullable=False)
     direccion = Column(String(255), nullable=True)
     telefono = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
     estado = Column(String(20), default="Activo", nullable=True)
+    created_at = Column(DateTime, default=datetime.now, nullable=True)
 
     # Campos de Membresía ($19.900 COP / mes)
     plan_membresia = Column(String(60), default=PLAN_MEMBRESIA_DEFAULT, nullable=True)
@@ -71,14 +73,17 @@ class Empresas(Base):
         venc_dt = self.fecha_vencimiento_membresia
         precio = float(self.precio_membresia or PRECIO_MEMBRESIA_COP)
 
+        created_dt = getattr(self, "created_at", None)
         return {
             "id": self.id,
             "nombre": self.nombre,
+            "razon_social": getattr(self, "razon_social", None) or self.nombre,
             "nit": self.nit,
             "direccion": self.direccion,
             "telefono": self.telefono,
             "email": self.email,
             "estado": self.estado or "Activo",
+            "created_at": created_dt.strftime(fmt) if isinstance(created_dt, datetime) else (str(created_dt) if created_dt else None),
             "plan_membresia": self.plan_membresia or PLAN_MEMBRESIA_DEFAULT,
             "precio_membresia": precio,
             "precio_membresia_cop": precio,

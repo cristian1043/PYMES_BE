@@ -13,7 +13,8 @@ class TransaccionesPago(Base):
     ESTADOS_FINALES = ('APROBADA', 'RECHAZADA', 'ANULADA', 'ERROR', 'EXPIRADA')
 
     id = Column(Integer, primary_key=True)
-    id_factura = Column(Integer, nullable=False, index=True)
+    id_factura = Column(Integer, nullable=True, index=True)
+    id_pedido = Column(Integer, nullable=True, index=True)
     id_empresa = Column(Integer, nullable=True, index=True)
     id_terminal = Column(Integer, nullable=True)
     id_metodo_pago = Column(Integer, nullable=True)
@@ -76,6 +77,7 @@ class TransaccionesPago(Base):
         return {
             "id": self.id,
             "id_factura": self.id_factura,
+            "id_pedido": getattr(self, "id_pedido", None),
             "id_empresa": self.id_empresa,
             "id_terminal": self.id_terminal,
             "terminal_nombre": terminal_nombre,

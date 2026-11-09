@@ -4,13 +4,13 @@ from src.models import Base, session
 from src.models.clientes import Clientes
 from src.models.usuarios import Usuarios
 from src.models.metodos_pago import MetodosPago
- 
+
 
 class Facturas(Base):
     __tablename__ = 'facturas'
 
     id = Column(Integer, primary_key=True)
-    numero = Column(String(50), unique=True, nullable=False)
+    numero = Column(String(50), nullable=False, index=True)
     fecha = Column(DateTime, default=datetime.now, nullable=False)
     subtotal = Column(Float, nullable=False)
     iva = Column(Float, nullable=False)
@@ -21,14 +21,14 @@ class Facturas(Base):
     id_usuario = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     id_metodo_pago = Column(Integer, ForeignKey('metodos_pago.id'), nullable=False)
     estado = Column(String(20), default='Emitida', nullable=True)
-    id_empresa = Column(Integer, nullable=True)
+    id_empresa = Column(Integer, nullable=True, index=True)
     pasarela = Column(String(50), nullable=True)
     referencia_pago = Column(String(100), nullable=True)
 
     def create(self):
         session.add(self)
         session.commit()
-    
+
     @staticmethod
     def get():
         return session.query(Facturas).all()
@@ -36,18 +36,18 @@ class Facturas(Base):
     @staticmethod
     def get_query():
         return session.query(Facturas)
- 
+
     @staticmethod
     def get_by_id(id):
         return session.query(Facturas).filter_by(id=id).first()
 
     def update(self):
         session.commit()
-    
+
     def delete(self):
         session.delete(self)
         session.commit()
-         
+
     def to_dict(self):
         cliente_nombre = "Cliente General"
         cliente_doc = ""
@@ -93,4 +93,3 @@ class Facturas(Base):
             "pasarela": getattr(self, "pasarela", None),
             "referencia_pago": getattr(self, "referencia_pago", None)
         }
-

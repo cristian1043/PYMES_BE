@@ -1,25 +1,26 @@
 from sqlalchemy import Column, Integer, String
 from src.models import Base, session
 
+
 class Proveedores(Base):
     __tablename__ = 'proveedores'
 
     id = Column(Integer, primary_key=True)
-    nit = Column(String(20), unique=True, nullable=False)
+    nit = Column(String(20), nullable=False, index=True)
     codigo = Column(String(50), nullable=True)
     nombre = Column(String(255), nullable=False)
     contacto = Column(String(100), nullable=True)
     telefono = Column(String(20), nullable=False)
     direccion = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
+    email = Column(String(255), nullable=False, index=True)
     detalle_servicios = Column(String(500))
     estado = Column(String(20), default='Activo', nullable=True)
-    id_empresa = Column(Integer, nullable=True)
+    id_empresa = Column(Integer, nullable=True, index=True)
 
     def save(self):
         session.add(self)
-        session.commit()   
-    
+        session.commit()
+
     @staticmethod
     def get():
         return session.query(Proveedores).all()
@@ -27,18 +28,18 @@ class Proveedores(Base):
     @staticmethod
     def get_query():
         return session.query(Proveedores)
-    
+
     @staticmethod
     def get_by_id(id):
         return session.query(Proveedores).filter_by(id=id).first()
-    
+
     def update(self):
-        session.commit()  
-        
+        session.commit()
+
     def delete(self):
         session.delete(self)
         session.commit()
-        
+
     def to_dict(self):
         return {
             "id": self.id,

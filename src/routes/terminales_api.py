@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from src.models.metodos_pago import MetodosPago
 from src.models.terminales import Terminales
 from src.services.pagos import CANALES, obtener_proveedor
 from src.services.pagos.base import ErrorPasarela
-from src.utils.security import roles_required, tenant_required
+from src.utils.security import roles_required, verificar_acceso_empresa, obtener_empresa_id_request
 
 terminales_bp = Blueprint("terminales", __name__)
 
@@ -14,34 +14,15 @@ PROVEEDORES_DATAFONO = CANALES["datafono"]  # ('bold', 'simulado')
 def _empresa_solicitada(data=None):
     data = data or {}
     emp_id = (
-        data.get("id_empresa") or data.get("empresa_id") or
-        request.args.get("empresa_id") or request.args.get("id_empresa") or
-        request.headers.get("X-Empresa-ID") or request.environ.get("tenant_empresa_id")
+        data.get("id_empresa")
+        or data.get("empresa_id")
+        or obtener_empresa_id_request()
     )
-    if not emp_id:
-        try:
-            claims = get_jwt() or {}
-            empresas_jwt = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
-            if empresas_jwt:
-                emp_id = empresas_jwt[0]
-        except Exception:
-            pass
-    return emp_id or 1
+    return int(emp_id) if emp_id and str(emp_id).isdigit() else None
 
 
 def _tiene_acceso_empresa(id_empresa):
-    claims = get_jwt() or {}
-    if claims.get("id_rol") == 1 or claims.get("rol") == "Administrador":
-        return True
-    if id_empresa is None:
-        return False
-    empresas = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
-    if int(id_empresa) in empresas:
-        return True
-    from src.models.usuario_empresas import UsuarioEmpresas
-    user_id = get_jwt_identity()
-    vinc = UsuarioEmpresas.get_by_usuario_empresa(user_id, int(id_empresa)) if user_id else None
-    return vinc is not None and vinc.estado == "Activo"
+    return verificar_acceso_empresa(id_empresa)
 
 
 def _validar_metodo(id_metodo, id_empresa):
@@ -78,28 +59,20 @@ def _aplicar_campos(terminal, data, id_empresa):
             raise ValueError("Para Bold debes indicar el email del usuario Bold que opera el datáfono.")
 
 
-# ===========================
-# Listar terminales de la empresa
-# ===========================
 @terminales_bp.route("/", methods=["GET"])
 @jwt_required()
 def get_terminales():
     empresa_id = _empresa_solicitada()
-    eid = int(empresa_id) if str(empresa_id or "").isdigit() else 1
-    try:
-        from src.utils.migrations import DatabaseMigrations
-        DatabaseMigrations.asegurar_esquema_y_datos(empresa_id=eid)
-    except Exception:
-        pass
-    q = Terminales.get_query().filter(Terminales.id_empresa == eid)
+    if not empresa_id:
+        return jsonify([]), 200
+    if not _tiene_acceso_empresa(empresa_id):
+        return jsonify({"mensaje": "Acceso denegado a las terminales de esta empresa."}), 403
+    q = Terminales.get_query().filter(Terminales.id_empresa == int(empresa_id))
     if str(request.args.get("solo_activas") or "").lower() in ("true", "1", "yes"):
         q = q.filter((Terminales.estado == "Activo") | (Terminales.estado == None))
     return jsonify([t.to_dict() for t in q.order_by(Terminales.nombre.asc()).all()]), 200
 
 
-# ===========================
-# Datáfonos disponibles en la cuenta del proveedor (Bold) o de pruebas (Simulado)
-# ===========================
 @terminales_bp.route("/disponibles", methods=["GET"])
 @jwt_required()
 @roles_required("Administrador", 1)
@@ -122,16 +95,13 @@ def get_disponibles():
     return jsonify({"terminales": terminales}), 200
 
 
-# ===========================
-# Crear terminal
-# ===========================
 @terminales_bp.route("/", methods=["POST"])
 @jwt_required()
 @roles_required("Administrador", 1)
 def create_terminal():
     data = request.get_json() or {}
     empresa_id = _empresa_solicitada(data)
-    if not empresa_id or not str(empresa_id).isdigit():
+    if not empresa_id:
         return jsonify({"mensaje": "Se requiere 'id_empresa'."}), 400
     if not _tiene_acceso_empresa(empresa_id):
         return jsonify({"mensaje": "Acceso denegado a esta empresa."}), 403
@@ -146,9 +116,6 @@ def create_terminal():
     return jsonify(terminal.to_dict()), 201
 
 
-# ===========================
-# Actualizar terminal
-# ===========================
 @terminales_bp.route("/<int:id>", methods=["PUT"])
 @jwt_required()
 @roles_required("Administrador", 1)
@@ -169,9 +136,6 @@ def update_terminal(id):
     return jsonify(terminal.to_dict()), 200
 
 
-# ===========================
-# Desactivar terminal (borrado lógico para conservar el historial de cobros)
-# ===========================
 @terminales_bp.route("/<int:id>", methods=["DELETE"])
 @jwt_required()
 @roles_required("Administrador", 1)

@@ -1,31 +1,24 @@
+from datetime import datetime
 from src.models.clientes import Clientes
 from src.models import session
 from src.utils.pagination import paginate_query
+
 
 class ClientesController:
 
     @staticmethod
     def get(empresa_id=None):
-        query = Clientes.get_query()
-        if empresa_id:
-            eid = int(empresa_id)
-            if eid == 1:
-                query = query.filter((Clientes.id_empresa == eid) | (Clientes.id_empresa == None))
-            else:
-                query = query.filter(Clientes.id_empresa == eid)
-        else:
+        if not empresa_id:
             return []
-        return query.all()
+        eid = int(empresa_id)
+        return Clientes.get_query().filter(Clientes.id_empresa == eid).all()
 
     @staticmethod
     def get_paginated(page=1, per_page=10, empresa_id=None):
         query = Clientes.get_query()
         if empresa_id:
             eid = int(empresa_id)
-            if eid == 1:
-                query = query.filter((Clientes.id_empresa == eid) | (Clientes.id_empresa == None))
-            else:
-                query = query.filter(Clientes.id_empresa == eid)
+            query = query.filter(Clientes.id_empresa == eid)
         else:
             return paginate_query(query.filter(Clientes.id_empresa == -1), page, per_page)
         return paginate_query(query, page, per_page)
@@ -37,57 +30,55 @@ class ClientesController:
     @staticmethod
     def create(data):
         doc_input = str(data.get("documento", "")).strip()
-        emp_id = data.get("id_empresa") or data.get("empresa_id") or 1
+        if not doc_input:
+            raise ValueError("El documento del cliente es obligatorio.")
+
+        emp_id = data.get("id_empresa") or data.get("empresa_id")
+        if not emp_id:
+            raise ValueError("El identificador de empresa ('id_empresa') es obligatorio para registrar un cliente.")
         eid = int(emp_id)
 
-        # Buscar únicamente dentro de la misma empresa o registros huérfanos (id_empresa IS NULL)
-        if doc_input:
-            cliente_existente = Clientes.get_by_documento(doc_input, empresa_id=eid)
-            if cliente_existente:
-                cliente_existente.nombre = data.get("nombre") or cliente_existente.nombre
-                if hasattr(cliente_existente, 'apellido') and data.get("apellido"):
-                    cliente_existente.apellido = data.get("apellido")
-                cliente_existente.direccion = data.get("direccion") or cliente_existente.direccion
-                cliente_existente.telefono = data.get("telefono") or cliente_existente.telefono
-                if data.get("email"):
-                    cliente_existente.email = data.get("email")
-                cliente_existente.tipo_documento = data.get("tipo_documento", getattr(cliente_existente, 'tipo_documento', 'CC'))
-                cliente_existente.id_empresa = eid
-                cliente_existente.estado = "Activo"
-                cliente_existente.update()
-                return cliente_existente
+        cliente_existente = Clientes.get_by_documento(doc_input, empresa_id=eid)
+        if cliente_existente:
+            cliente_existente.nombre = data.get("nombre") or cliente_existente.nombre
+            if hasattr(cliente_existente, 'apellido') and data.get("apellido") is not None:
+                cliente_existente.apellido = data.get("apellido")
+            cliente_existente.direccion = data.get("direccion") or cliente_existente.direccion
+            cliente_existente.telefono = data.get("telefono") or cliente_existente.telefono
+            if data.get("email"):
+                cliente_existente.email = data.get("email")
+            cliente_existente.tipo_documento = data.get("tipo_documento", getattr(cliente_existente, 'tipo_documento', 'CC'))
+            cliente_existente.id_empresa = eid
+            cliente_existente.estado = "Activo"
+            cliente_existente.update()
+            return cliente_existente
 
         cliente = Clientes()
         cliente.documento = doc_input
-        cliente.nombre = data.get("nombre", "")
-        if hasattr(cliente, 'apellido'):
-            cliente.apellido = data.get("apellido", "")
-        cliente.direccion = data.get("direccion", "")
-        cliente.telefono = data.get("telefono", "")
-        email_cand = data.get("email", "")
+        cliente.nombre = str(data.get("nombre") or "").strip()
+        if not cliente.nombre:
+            raise ValueError("El nombre del cliente es obligatorio.")
+        cliente.apellido = str(data.get("apellido") or "").strip()
+        cliente.direccion = str(data.get("direccion") or "").strip()
+        cliente.telefono = str(data.get("telefono") or "").strip()
+        email_cand = str(data.get("email") or "").strip()
         if not email_cand:
             email_cand = f"cli_{doc_input}_{eid}@correo.com"
         cliente.email = email_cand
         cliente.tipo_documento = data.get("tipo_documento", "CC")
         cliente.estado = data.get("estado", "Activo")
         cliente.id_empresa = eid
-        
-        # Generar código correlativo por empresa CLI-E{empresa_id}-{consecutivo:03d}
+
         if data.get("codigo"):
             cliente.codigo = data.get("codigo")
         else:
             count = session.query(Clientes).filter(Clientes.id_empresa == eid).count()
             cliente.codigo = f"CLI-E{eid}-{count + 1:03d}"
-        
-        # Por seguridad PCI-DSS ya no se almacena ningún dato de tarjeta del cliente
-        # (cualquier campo de tarjeta recibido en la petición se ignora).
 
-        from datetime import datetime
         try:
             cliente.save()
         except Exception:
             session.rollback()
-            # Si la BD heredada tiene restricción UNIQUE global en documento o email, aislar por empresa sin sobrescribir otra empresa
             cliente.documento = f"{doc_input}#E{eid}"
             cliente.email = f"cli_{doc_input}_{eid}_{int(datetime.now().timestamp())}@correo.com"
             cliente.save()
@@ -97,7 +88,6 @@ class ClientesController:
     @staticmethod
     def update(id, data):
         cliente = Clientes.get_by_id(id)
-
         if cliente is None:
             return None
 
@@ -112,9 +102,6 @@ class ClientesController:
             cliente.tipo_documento = data["tipo_documento"]
         if "estado" in data:
             cliente.estado = data["estado"]
-        
-        # Por seguridad PCI-DSS ya no se almacena ningún dato de tarjeta del cliente
-        # (cualquier campo de tarjeta recibido en la petición se ignora).
 
         cliente.update()
         return cliente
@@ -137,7 +124,6 @@ class ClientesController:
         cliente = Clientes.get_by_id(id)
         if cliente is None:
             return False
-        # Desactivación lógica (Soft-Delete) para proteger facturas e histórico
         cliente.estado = "Inactivo"
         cliente.update()
         return True

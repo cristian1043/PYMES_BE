@@ -25,6 +25,7 @@ class Usuarios(Base):
     numero_hijos = Column(Integer, default=0, nullable=True)
     sesion_version = Column(Integer, default=1, nullable=True)
     foto = Column(String, nullable=True)
+    es_super_admin = Column(Integer, default=0, nullable=True)
 
     def save(self):
         session.add(self)
@@ -81,5 +82,23 @@ class Usuarios(Base):
             "estado_civil": self.estado_civil or "",
             "numero_hijos": self.numero_hijos if self.numero_hijos is not None else 0,
             "sesion_version": getattr(self, "sesion_version", 1) or 1,
-            "foto": self.foto or ""
+            "foto": self.foto or "",
+            "es_super_admin": bool(getattr(self, "es_super_admin", 0))
+        }
+
+    def to_safe_dict(self):
+        """Representación segura sin datos bancarios ni sensibles para consultas de directorio."""
+        return {
+            "id": self.id,
+            "tipo_documento": self.tipo_documento,
+            "documento": self.documento,
+            "nombre": self.nombre,
+            "apellido": self.apellido,
+            "telefono": self.telefono,
+            "email": self.email,
+            "username": self.username,
+            "id_rol": self.id_rol,
+            "estado": self.estado or "Activo",
+            "foto": self.foto or "",
+            "es_super_admin": bool(getattr(self, "es_super_admin", 0))
         }

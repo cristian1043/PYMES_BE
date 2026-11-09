@@ -3,52 +3,43 @@ from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from src.controllers.compras_controller import ComprasController
 from src.models.compras import Compras
 from src.utils.pagination import get_pagination_params
-from src.utils.security import roles_required, tenant_required
+from src.utils.security import (
+    roles_required,
+    tenant_required,
+    verificar_acceso_empresa,
+    obtener_empresa_id_request,
+    obtener_rol_en_empresa,
+    es_super_admin_actual,
+)
 
 compras_bp = Blueprint("compras", __name__)
 
+
 def _resolver_empresa_id(data=None):
-    """Resuelve id_empresa desde body JSON, header X-Empresa-ID, query params, entorno tenant o JWT."""
-    emp_id = None
     if isinstance(data, dict):
         emp_id = data.get("id_empresa") or data.get("empresa_id")
-    if not emp_id:
-        emp_id = (
-            request.headers.get("X-Empresa-ID")
-            or request.args.get("empresa_id")
-            or request.args.get("id_empresa")
-            or request.environ.get("tenant_empresa_id")
-        )
-    if not emp_id:
-        try:
-            claims = get_jwt() or {}
-            empresas_jwt = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
-            if empresas_jwt:
-                emp_id = empresas_jwt[0]
-        except Exception:
-            pass
-    return emp_id
+        if emp_id:
+            return int(emp_id)
+    return obtener_empresa_id_request()
 
-def validar_acceso_compra(compra_id, claims):
-    """Verifica que el usuario tenga acceso a la empresa de la orden de compra solicitada."""
-    rol_usuario = claims.get("rol", "")
-    id_rol = claims.get("id_rol", 0)
-    if id_rol == 1 or rol_usuario == "Administrador":
-        return True, None
 
+def validar_acceso_compra(compra_id, claims=None, require_admin=False):
+    """Verifica que la compra exista y pertenezca a una empresa autorizada para el usuario."""
     compra = Compras.get_by_id(compra_id)
     if not compra:
         return False, jsonify({"mensaje": "Compra no encontrada"}), 404
 
-    empresas_usuario = [int(e) for e in claims.get("empresas", []) if str(e).isdigit()]
-    if compra.id_empresa is not None and int(compra.id_empresa) not in empresas_usuario:
+    if not compra.id_empresa or not verificar_acceso_empresa(compra.id_empresa):
         return False, jsonify({"mensaje": "Acceso denegado: No tienes acceso a los registros de esta empresa."}), 403
+
+    if require_admin and not es_super_admin_actual():
+        rol_id, _ = obtener_rol_en_empresa(compra.id_empresa)
+        if rol_id != 1:
+            return False, jsonify({"mensaje": "Acceso denegado: Se requiere rol de Administrador en esta empresa."}), 403
 
     return True, compra
 
-# ===========================
-# Obtener todas las compras (paginado)
-# ===========================
+
 @compras_bp.route("/", methods=["GET"])
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
@@ -59,25 +50,21 @@ def get_compras():
     resultado = ComprasController.get_paginated(page, per_page, empresa_id=empresa_id)
     return jsonify(resultado), 200
 
-# ===========================
-# Obtener siguiente número de compra
-# ===========================
+
 @compras_bp.route("/siguiente_numero", methods=["GET"])
 @jwt_required()
+@tenant_required(allow_global_admin=True)
 def get_siguiente_numero():
     empresa_id = _resolver_empresa_id()
     numero = ComprasController.obtener_siguiente_numero(empresa_id=empresa_id)
     return jsonify({"siguiente_numero": numero}), 200
 
-# ===========================
-# Cancelar una compra
-# ===========================
+
 @compras_bp.route("/<int:id>/cancelar", methods=["POST"])
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def cancelar_compra(id):
-    claims = get_jwt() or {}
-    permitido, err_res, *code = validar_acceso_compra(id, claims)
+    permitido, err_res, *code = validar_acceso_compra(id, get_jwt() or {})
     if not permitido:
         return err_res, (code[0] if code else 403)
 
@@ -86,15 +73,12 @@ def cancelar_compra(id):
         return jsonify(compra.to_dict()), 200
     return jsonify({"mensaje": "Compra no encontrada"}), 404
 
-# ===========================
-# Obtener una compra por ID
-# ===========================
+
 @compras_bp.route("/<int:id>", methods=["GET"])
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def get_compra(id):
-    claims = get_jwt() or {}
-    permitido, err_res, *code = validar_acceso_compra(id, claims)
+    permitido, err_res, *code = validar_acceso_compra(id, get_jwt() or {})
     if not permitido:
         return err_res, (code[0] if code else 403)
 
@@ -106,9 +90,7 @@ def get_compra(id):
             return jsonify(compra.to_dict()), 200
     return jsonify({"mensaje": "Compra no encontrada"}), 404
 
-# ===========================
-# Crear una compra
-# ===========================
+
 @compras_bp.route("/", methods=["POST"])
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
@@ -116,8 +98,9 @@ def get_compra(id):
 def create_compra():
     data = request.get_json() or {}
     emp_id = _resolver_empresa_id(data)
-    if emp_id and not data.get("id_empresa"):
-        data["id_empresa"] = emp_id
+    if not emp_id or not verificar_acceso_empresa(emp_id):
+        return jsonify({"mensaje": "No tienes permisos para registrar compras en la empresa indicada."}), 403
+    data["id_empresa"] = int(emp_id)
 
     identity = get_jwt_identity()
     if identity and not data.get("id_usuario"):
@@ -134,33 +117,30 @@ def create_compra():
     except Exception as e:
         return jsonify({"mensaje": f"Error al registrar compra: {str(e)}"}), 400
 
-# ===========================
-# Actualizar una compra
-# ===========================
+
 @compras_bp.route("/<int:id>", methods=["PUT"])
 @jwt_required()
 @roles_required("Administrador", "Vendedor", "Almacenista", 1, 2, 3)
 def update_compra(id):
-    claims = get_jwt() or {}
-    permitido, err_res, *code = validar_acceso_compra(id, claims)
+    permitido, err_res, *code = validar_acceso_compra(id, get_jwt() or {})
     if not permitido:
         return err_res, (code[0] if code else 403)
 
     data = request.get_json() or {}
-    compra = ComprasController.update(id, data)
-    if compra:
-        return jsonify(compra.to_dict()), 200
-    return jsonify({"mensaje": "Compra no encontrada"}), 404
+    try:
+        compra = ComprasController.update(id, data)
+        if compra:
+            return jsonify(compra.to_dict()), 200
+        return jsonify({"mensaje": "Compra no encontrada"}), 404
+    except ValueError as ve:
+        return jsonify({"mensaje": str(ve)}), 400
 
-# ===========================
-# Eliminar una compra
-# ===========================
+
 @compras_bp.route("/<int:id>", methods=["DELETE"])
 @jwt_required()
-@roles_required("Administrador")
+@roles_required("Administrador", 1)
 def delete_compra(id):
-    claims = get_jwt() or {}
-    permitido, err_res, *code = validar_acceso_compra(id, claims)
+    permitido, err_res, *code = validar_acceso_compra(id, get_jwt() or {}, require_admin=True)
     if not permitido:
         return err_res, (code[0] if code else 403)
 

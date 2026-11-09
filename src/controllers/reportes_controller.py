@@ -3,78 +3,71 @@ from src.models.facturas import Facturas
 from src.models.clientes import Clientes
 from src.models.productos import Productos
 
+
 class ReportesController:
     """
     Controlador encargado de procesar toda la lógica de negocio y cálculo
-    de reportes estadísticos y financieros en el Backend.
+    de reportes estadísticos y financieros en el Backend con aislamiento estricto por empresa.
     """
 
     @staticmethod
     def get_reporte_ventas(empresa_id=None):
         """Calcula los agregados financieros de las facturas válidas registradas (excluye canceladas)."""
+        empty_res = {
+            'total_ventas': 0.0,
+            'subtotal': 0.0,
+            'iva': 0.0,
+            'descuento': 0.0,
+            'cantidad_facturas': 0,
+            'promedio_venta': 0.0,
+            'facturas': []
+        }
+        if not empresa_id:
+            return empty_res
         try:
-            query = session.query(Facturas)
-            if empresa_id:
-                query = query.filter(Facturas.id_empresa == int(empresa_id))
-            facturas = query.all()
+            eid = int(empresa_id)
+            facturas = session.query(Facturas).filter(Facturas.id_empresa == eid).all()
             if not facturas:
-                return {
-                    'total_ventas': 0.0,
-                    'subtotal': 0.0,
-                    'iva': 0.0,
-                    'descuento': 0.0,
-                    'cantidad_facturas': 0,
-                    'promedio_venta': 0.0,
-                    'facturas': []
-                }
+                return empty_res
 
             facturas_validas = [f for f in facturas if getattr(f, 'estado', 'Emitida') != 'Cancelada']
 
-            total_ventas = sum(f.total for f in facturas_validas)
-            subtotal = sum(f.subtotal for f in facturas_validas)
-            iva = sum(f.iva for f in facturas_validas)
-            descuento = sum(f.descuento for f in facturas_validas)
+            total_ventas = sum(float(f.total or 0.0) for f in facturas_validas)
+            subtotal = sum(float(f.subtotal or 0.0) for f in facturas_validas)
+            iva = sum(float(f.iva or 0.0) for f in facturas_validas)
+            descuento = sum(float(f.descuento or 0.0) for f in facturas_validas)
             cantidad = len(facturas_validas)
             promedio = (total_ventas / cantidad) if cantidad > 0 else 0.0
 
             return {
-                'total_ventas': total_ventas,
-                'subtotal': subtotal,
-                'iva': iva,
-                'descuento': descuento,
+                'total_ventas': round(total_ventas, 2),
+                'subtotal': round(subtotal, 2),
+                'iva': round(iva, 2),
+                'descuento': round(descuento, 2),
                 'cantidad_facturas': cantidad,
-                'promedio_venta': promedio,
+                'promedio_venta': round(promedio, 2),
                 'facturas': [f.to_dict() for f in facturas]
             }
-        except Exception as e:
+        except Exception:
             session.rollback()
-            print(f"Error en get_reporte_ventas: {str(e)}")
-            return {
-                'total_ventas': 0.0,
-                'subtotal': 0.0,
-                'iva': 0.0,
-                'descuento': 0.0,
-                'cantidad_facturas': 0,
-                'promedio_venta': 0.0,
-                'facturas': []
-            }
+            return empty_res
 
     @staticmethod
     def get_reporte_clientes(empresa_id=None):
         """Procesa el ranking de compras agrupado por cliente (excluye facturas canceladas)."""
+        if not empresa_id:
+            return []
         try:
-            cli_query = session.query(Clientes)
-            fac_query = session.query(Facturas)
-            if empresa_id:
-                cli_query = cli_query.filter(Clientes.id_empresa == int(empresa_id))
-                fac_query = fac_query.filter(Facturas.id_empresa == int(empresa_id))
-
-            clientes = cli_query.all()
-            facturas = fac_query.all()
+            eid = int(empresa_id)
+            clientes = session.query(Clientes).filter(Clientes.id_empresa == eid).all()
+            facturas = session.query(Facturas).filter(Facturas.id_empresa == eid).all()
 
             resultado = []
             for cli in clientes:
-                facturas_cli = [f for f in facturas if f.id_cliente and str(f.id_cliente) == str(cli.id) and getattr(f, 'estado', 'Emitida') != 'Cancelada']
+                facturas_cli = [
+                    f for f in facturas
+                    if f.id_cliente and str(f.id_cliente) == str(cli.id) and getattr(f, 'estado', 'Emitida') != 'Cancelada'
+                ]
                 total_comprado = sum(float(f.total or 0.0) for f in facturas_cli)
                 num_facturas = len(facturas_cli)
 
@@ -85,80 +78,75 @@ class ReportesController:
                     'id': cli.id,
                     'nombre': nombre_comp,
                     'tipo_documento': getattr(cli, 'tipo_documento', 'CC') or 'CC',
-                    'documento': getattr(cli, 'documento', '') or 'Sin documento',
+                    'documento': (getattr(cli, 'documento', '') or 'Sin documento').split("#E")[0],
                     'direccion': getattr(cli, 'direccion', '') or 'Sin dirección registrada',
                     'email': cli.email or 'Sin correo',
                     'telefono': cli.telefono or 'Sin teléfono',
                     'num_facturas': num_facturas,
-                    'total_comprado': total_comprado
+                    'total_comprado': round(total_comprado, 2)
                 })
 
             resultado.sort(key=lambda x: x['total_comprado'], reverse=True)
             return resultado
-        except Exception as e:
+        except Exception:
             session.rollback()
-            print(f"Error en get_reporte_clientes: {str(e)}")
             return []
 
     @staticmethod
     def get_reporte_inventario(empresa_id=None):
         """Calcula la valoración total del stock e identifica productos críticos."""
+        empty_inv = {
+            'valor_total_inventario': 0.0,
+            'total_productos': 0,
+            'productos_bajo_stock': 0,
+            'productos': []
+        }
+        if not empresa_id:
+            return empty_inv
         try:
-            query = session.query(Productos)
-            if empresa_id:
-                query = query.filter(Productos.id_empresa == int(empresa_id))
-            productos = query.all()
+            eid = int(empresa_id)
+            productos = session.query(Productos).filter(Productos.id_empresa == eid).all()
             if not productos:
-                return {
-                    'valor_total_inventario': 0.0,
-                    'total_productos': 0,
-                    'productos_bajo_stock': 0,
-                    'productos': []
-                }
+                return empty_inv
 
-            valor_total = sum(p.precio * p.stock for p in productos)
+            valor_total = sum(float(p.precio or 0.0) * int(p.stock or 0) for p in productos)
             total_prods = len(productos)
             bajo_stock = [p for p in productos if (p.stock or 0) <= 10]
 
             return {
-                'valor_total_inventario': valor_total,
+                'valor_total_inventario': round(valor_total, 2),
                 'total_productos': total_prods,
                 'productos_bajo_stock': len(bajo_stock),
                 'productos': [p.to_dict() for p in productos]
             }
-        except Exception as e:
+        except Exception:
             session.rollback()
-            print(f"Error en get_reporte_inventario: {str(e)}")
-            return {
-                'valor_total_inventario': 0.0,
-                'total_productos': 0,
-                'productos_bajo_stock': 0,
-                'productos': []
-            }
+            return empty_inv
 
     @staticmethod
     def get_reporte_top_productos(empresa_id=None):
-        """Calcula el ranking de productos más vendidos según el historial de facturación válida (excluye canceladas)."""
+        """Calcula el ranking de productos más vendidos según el historial de facturación válida."""
+        if not empresa_id:
+            return []
         try:
             from src.models.detalle_facturas import DetalleFacturas
-            prod_query = session.query(Productos)
-            fac_query = session.query(Facturas)
-            if empresa_id:
-                prod_query = prod_query.filter(Productos.id_empresa == int(empresa_id))
-                fac_query = fac_query.filter(Facturas.id_empresa == int(empresa_id))
-            productos = prod_query.all()
-            prod_ids = {p.id for p in productos}
+            eid = int(empresa_id)
+            productos = session.query(Productos).filter(Productos.id_empresa == eid).all()
+            if not productos:
+                return []
+            prod_ids = [p.id for p in productos]
 
-            facturas_validas_ids = {
-                f.id for f in fac_query.all()
+            facturas_validas_ids = [
+                f.id for f in session.query(Facturas).filter(Facturas.id_empresa == eid).all()
                 if getattr(f, 'estado', 'Emitida') != 'Cancelada'
-            }
-
-            detalles_all = session.query(DetalleFacturas).all()
-            detalles = [
-                d for d in detalles_all
-                if d.id_producto in prod_ids and d.id_factura in facturas_validas_ids
             ]
+
+            detalles = []
+            if prod_ids and facturas_validas_ids:
+                detalles = session.query(DetalleFacturas).filter(
+                    DetalleFacturas.id_producto.in_(prod_ids),
+                    DetalleFacturas.id_factura.in_(facturas_validas_ids)
+                ).all()
 
             ventas_prod = {}
             for d in detalles:
@@ -177,15 +165,14 @@ class ReportesController:
                     'id': p.id,
                     'codigo': getattr(p, 'codigo', f'PROD-{p.id}'),
                     'nombre': p.nombre,
-                    'precio': float(p.precio),
+                    'precio': float(p.precio or 0.0),
                     'stock': p.stock,
                     'cantidad_vendida': stats['cantidad_vendida'],
-                    'total_recaudado': stats['total_recaudado']
+                    'total_recaudado': round(stats['total_recaudado'], 2)
                 })
 
             resultado.sort(key=lambda x: (x['cantidad_vendida'], x['total_recaudado']), reverse=True)
             return resultado
-        except Exception as e:
+        except Exception:
             session.rollback()
-            print(f"Error en get_reporte_top_productos: {str(e)}")
             return []

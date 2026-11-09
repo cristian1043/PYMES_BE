@@ -1,48 +1,32 @@
 from datetime import datetime, timedelta
 from src.models import session
 from src.models.empresas import Empresas, PRECIO_MEMBRESIA_COP, DIAS_MEMBRESIA_CICLO, PLAN_MEMBRESIA_DEFAULT
+from src.models.usuario_empresas import UsuarioEmpresas
+from src.models.portal_config import ConfiguracionPortal
+
 
 class EmpresasController:
 
     @staticmethod
-    def get():
-        empresas = Empresas.get()
-        if not empresas:
-            ahora = datetime.now()
-            venc = ahora + timedelta(days=DIAS_MEMBRESIA_CICLO)
+    def get(user_id=None, es_super_admin=False):
+        """
+        Retorna las empresas autorizadas para el usuario consultante.
+        - Nunca crea empresas ficticias automáticamente durante consultas normales.
+        - Un usuario normal o administrador de empresa solo ve las empresas a las que está vinculado activamente.
+        - Solo un Super Administrador global (`es_super_admin=True`) puede listar todas las empresas.
+        """
+        if es_super_admin:
+            return Empresas.get()
 
-            emp1 = Empresas()
-            emp1.nombre = "Empresa Chaneques S.A.S."
-            emp1.nit = "900.123.456-1"
-            emp1.direccion = "Calle 10 #20-30"
-            emp1.telefono = "+57 300 1234567"
-            emp1.email = "contacto@chaneques.com"
-            emp1.estado = "Activo"
-            emp1.plan_membresia = PLAN_MEMBRESIA_DEFAULT
-            emp1.precio_membresia = PRECIO_MEMBRESIA_COP
-            emp1.estado_membresia = "Activa"
-            emp1.fecha_inicio_membresia = ahora
-            emp1.fecha_vencimiento_membresia = venc
-            emp1.auto_renovacion = 1
-            emp1.save()
+        if not user_id or not str(user_id).isdigit():
+            return []
 
-            emp2 = Empresas()
-            emp2.nombre = "Empresa La Vainilla S.A.S."
-            emp2.nit = "900.654.321-2"
-            emp2.direccion = "Carrera 45 #12-34"
-            emp2.telefono = "+57 315 9876543"
-            emp2.email = "contacto@lavainilla.com"
-            emp2.estado = "Activo"
-            emp2.plan_membresia = PLAN_MEMBRESIA_DEFAULT
-            emp2.precio_membresia = PRECIO_MEMBRESIA_COP
-            emp2.estado_membresia = "Activa"
-            emp2.fecha_inicio_membresia = ahora
-            emp2.fecha_vencimiento_membresia = venc
-            emp2.auto_renovacion = 1
-            emp2.save()
+        vinculaciones = UsuarioEmpresas.get_by_usuario(int(user_id))
+        ids_autorizados = [int(v.empresa_id) for v in vinculaciones if v.estado == "Activo" and v.empresa_id is not None]
+        if not ids_autorizados:
+            return []
 
-            empresas = [emp1, emp2]
-        return empresas
+        return session.query(Empresas).filter(Empresas.id.in_(ids_autorizados)).all()
 
     @staticmethod
     def get_by_id(id):
@@ -50,18 +34,27 @@ class EmpresasController:
 
     @staticmethod
     def create(data):
-        nit = data.get("nit")
-        if nit and session.query(Empresas).filter_by(nit=nit).first():
-            raise Exception(f"Ya existe una empresa registrada con el NIT '{nit}'.")
+        nombre = str(data.get("nombre") or "").strip()
+        if not nombre:
+            raise ValueError("El nombre comercial de la empresa es obligatorio.")
+
+        nit = str(data.get("nit") or "").strip()
+        if not nit:
+            raise ValueError("El NIT o identificación tributaria es obligatorio.")
+
+        if session.query(Empresas).filter_by(nit=nit).first():
+            raise ValueError(f"Ya existe una empresa registrada con el NIT '{nit}'.")
 
         ahora = datetime.now()
         empresa = Empresas()
-        empresa.nombre = data["nombre"]
+        empresa.nombre = nombre
+        empresa.razon_social = str(data.get("razon_social") or nombre).strip()
         empresa.nit = nit
-        empresa.direccion = data.get("direccion", "")
-        empresa.telefono = data.get("telefono", "")
-        empresa.email = data.get("email", "")
+        empresa.direccion = str(data.get("direccion") or "").strip()
+        empresa.telefono = str(data.get("telefono") or "").strip()
+        empresa.email = str(data.get("email") or "").strip()
         empresa.estado = data.get("estado", "Activo")
+        empresa.created_at = ahora
         empresa.plan_membresia = data.get("plan_membresia") or PLAN_MEMBRESIA_DEFAULT
         empresa.precio_membresia = PRECIO_MEMBRESIA_COP
         empresa.estado_membresia = data.get("estado_membresia") or "Activa"
@@ -71,8 +64,7 @@ class EmpresasController:
         empresa.save()
 
         usuario_id = data.get("usuario_id")
-        if usuario_id:
-            from src.models.usuario_empresas import UsuarioEmpresas
+        if usuario_id and str(usuario_id).isdigit():
             v = UsuarioEmpresas.get_by_usuario_empresa(int(usuario_id), empresa.id)
             if not v:
                 v = UsuarioEmpresas()
@@ -82,6 +74,12 @@ class EmpresasController:
                 v.estado = "Activo"
                 v.save()
 
+        # Inicializar configuración del Portal de Clientes para la nueva empresa
+        try:
+            ConfiguracionPortal.get_or_create_for_empresa(empresa)
+        except Exception:
+            pass
+
         return empresa
 
     @staticmethod
@@ -90,10 +88,17 @@ class EmpresasController:
         if not empresa:
             return None
 
-        if "nombre" in data:
-            empresa.nombre = data["nombre"]
-        if "nit" in data:
-            empresa.nit = data["nit"]
+        if "nombre" in data and str(data["nombre"]).strip():
+            empresa.nombre = str(data["nombre"]).strip()
+        if "razon_social" in data:
+            empresa.razon_social = str(data["razon_social"] or empresa.nombre).strip()
+        if "nit" in data and str(data["nit"]).strip():
+            nuevo_nit = str(data["nit"]).strip()
+            if nuevo_nit != empresa.nit:
+                existente = session.query(Empresas).filter(Empresas.nit == nuevo_nit, Empresas.id != empresa.id).first()
+                if existente:
+                    raise ValueError(f"Ya existe otra empresa registrada con el NIT '{nuevo_nit}'.")
+            empresa.nit = nuevo_nit
         if "direccion" in data:
             empresa.direccion = data["direccion"]
         if "telefono" in data:

@@ -1,19 +1,28 @@
 import re
 import time
+import secrets
 from sqlalchemy import func, or_
 from src.models import session
 from src.models.usuarios import Usuarios
 from src.models.roles import Roles
-from src.utils.security import hash_password
+from src.utils.security import hash_password, validar_politica_password
 from src.utils.pagination import paginate_query
 
+
 class UsuariosController:
-    """
-    Controlador encargado de la lógica de negocio de usuarios.
-    """
+    """Controlador encargado de la lógica de negocio de usuarios administrativos."""
 
     @staticmethod
-    def get():
+    def get(empresa_id=None):
+        if empresa_id:
+            from src.models.usuario_empresas import UsuarioEmpresas
+            rows = session.query(Usuarios).join(
+                UsuarioEmpresas, Usuarios.id == UsuarioEmpresas.usuario_id
+            ).filter(
+                UsuarioEmpresas.empresa_id == int(empresa_id),
+                UsuarioEmpresas.estado != "No Vinculado"
+            ).all()
+            return rows
         return Usuarios.get()
 
     @staticmethod
@@ -126,10 +135,9 @@ class UsuariosController:
 
     @staticmethod
     def generar_username_unico(nombre, apellido, email):
-        """Genera automáticamente un @username único basado en el nombre y apellido o email."""
         nom = re.sub(r'[^a-zA-Z0-9]', '', str(nombre or '').strip().lower().split()[0] if str(nombre or '').strip() else '')
         ape = re.sub(r'[^a-zA-Z0-9]', '', str(apellido or '').strip().lower().split()[0] if str(apellido or '').strip() else '')
-        
+
         if nom and ape:
             base = f"{nom}.{ape}"
         elif nom:
@@ -137,7 +145,7 @@ class UsuariosController:
         else:
             base_mail = str(email or 'user').split('@')[0].lower()
             base = re.sub(r'[^a-zA-Z0-9._]', '', base_mail) or 'user'
-        
+
         candidato = base
         idx = 1
         while UsuariosController.get_by_username(candidato):
@@ -147,7 +155,6 @@ class UsuariosController:
 
     @staticmethod
     def create(data):
-        # 1. Resolver o autogenerar @username
         username = str(data.get("username") or "").strip().lstrip("@")
         if not username:
             username = UsuariosController.generar_username_unico(
@@ -160,7 +167,6 @@ class UsuariosController:
             if username_existente:
                 raise ValueError(f"El nombre de usuario '@{username}' ya está en uso. Por favor elige otro.")
 
-        # 2. Validar unicidad de correo electrónico
         email = str(data.get("email") or "").strip().lower()
         if not email:
             raise ValueError("El correo electrónico es obligatorio.")
@@ -169,22 +175,25 @@ class UsuariosController:
         if email_existente:
             raise ValueError(f"El correo electrónico '{email}' ya se encuentra registrado.")
 
-        # 3. Rol del usuario
         id_rol = int(data.get("id_rol")) if data.get("id_rol") else 2
+        if id_rol not in (1, 2, 3):
+            id_rol = 2
         rol_existente = Roles.get_by_id(id_rol)
         if not rol_existente:
-            nuevo_rol = Roles()
-            nuevo_rol.nombre = "Vendedor"
-            nuevo_rol.descripcion = "Gestión de ventas y clientes"
+            nuevo_rol = Roles(id=id_rol, nombre="Vendedor", descripcion="Gestión de ventas y clientes")
             nuevo_rol.save()
-            id_rol = nuevo_rol.id
 
-        raw_password = data.get("password") or data.get("password_hash", "123456")
-        
+        raw_password = data.get("password") or data.get("password_hash")
+        if raw_password:
+            valida_pol, msg_pol = validar_politica_password(str(raw_password))
+            if not valida_pol:
+                raise ValueError(msg_pol)
+        else:
+            raw_password = secrets.token_urlsafe(12)
+
         usuario = Usuarios()
         usuario.tipo_documento = str(data.get("tipo_documento") or "CC").strip().upper()
-        
-        # Documento único
+
         doc = str(data.get("documento") or "").strip()
         if not doc:
             doc = f"{int(time.time())}"
@@ -193,7 +202,7 @@ class UsuariosController:
             if doc_existente:
                 raise ValueError(f"El documento '{doc}' ya se encuentra registrado con otro usuario.")
         usuario.documento = doc
-        
+
         usuario.nombre = str(data.get("nombre") or "").strip()
         usuario.apellido = str(data.get("apellido") or "").strip()
         usuario.telefono = str(data.get("telefono") or "0000000000").strip()
@@ -201,6 +210,7 @@ class UsuariosController:
         usuario.username = username
         usuario.password_hash = hash_password(raw_password)
         usuario.id_rol = id_rol
+        usuario.es_super_admin = 0  # Nunca se asigna super_admin global desde creación ordinaria
         usuario.estado = data.get("estado", "Activo")
         usuario.banco = data.get("banco", "")
         usuario.tipo_cuenta = data.get("tipo_cuenta", "")
@@ -212,24 +222,16 @@ class UsuariosController:
             usuario.numero_hijos = int(data.get("numero_hijos", 0)) if data.get("numero_hijos") not in [None, ""] else 0
         except (ValueError, TypeError):
             usuario.numero_hijos = 0
-        
+
         usuario.save()
-
-        # Simulación / Registro del envío de correo de bienvenida y credenciales
-        print(f"[NOTIFICACION POR CORREO]: Correo enviado con exito a {usuario.email}")
-        print(f"   Asunto: Bienvenido a PYMEsoft! Tus credenciales de acceso")
-        print(f"   Usuario: @{usuario.username} | Rol: {rol_existente.nombre if rol_existente else 'Usuario'}")
-
         return usuario
 
     @staticmethod
-    def update(id, data):
+    def update(id, data, allow_role_change=False):
         usuario = Usuarios.get_by_id(id)
-
         if usuario is None:
             return None
-        
-        # Campos de solo lectura no modificables: documento, tipo_documento, username, id
+
         if "nombre" in data:
             usuario.nombre = str(data["nombre"]).strip()
         if "apellido" in data:
@@ -244,12 +246,15 @@ class UsuariosController:
                     raise ValueError(f"El correo electrónico '{nuevo_email}' ya está registrado con otro usuario.")
             usuario.email = nuevo_email
         if "password" in data and str(data["password"]).strip():
-            usuario.password_hash = hash_password(str(data["password"]).strip())
-        elif "password_hash" in data and str(data["password_hash"]).strip():
-            usuario.password_hash = hash_password(str(data["password_hash"]).strip())
-        if "id_rol" in data and data["id_rol"]:
+            pwd_cand = str(data["password"]).strip()
+            valida_pol, msg_pol = validar_politica_password(pwd_cand)
+            if not valida_pol:
+                raise ValueError(msg_pol)
+            usuario.password_hash = hash_password(pwd_cand)
+            usuario.sesion_version = (getattr(usuario, "sesion_version", 1) or 1) + 1
+        if allow_role_change and "id_rol" in data and data["id_rol"]:
             usuario.id_rol = int(data["id_rol"])
-        if "estado" in data:
+        if allow_role_change and "estado" in data:
             usuario.estado = data["estado"]
         if "banco" in data:
             usuario.banco = str(data["banco"]).strip()
@@ -287,7 +292,6 @@ class UsuariosController:
     def delete(id):
         usuario = Usuarios.get_by_id(id)
         if usuario:
-            # Desactivación lógica (Soft-Delete) para proteger facturación, compras y auditoría
             usuario.estado = "Inactivo"
             usuario.update()
             return True
