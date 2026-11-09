@@ -1,5 +1,6 @@
+from datetime import datetime, timedelta
 from src.models import session
-from src.models.empresas import Empresas
+from src.models.empresas import Empresas, PRECIO_MEMBRESIA_COP, DIAS_MEMBRESIA_CICLO, PLAN_MEMBRESIA_DEFAULT
 
 class EmpresasController:
 
@@ -7,6 +8,9 @@ class EmpresasController:
     def get():
         empresas = Empresas.get()
         if not empresas:
+            ahora = datetime.now()
+            venc = ahora + timedelta(days=DIAS_MEMBRESIA_CICLO)
+
             emp1 = Empresas()
             emp1.nombre = "Empresa Chaneques S.A.S."
             emp1.nit = "900.123.456-1"
@@ -14,6 +18,12 @@ class EmpresasController:
             emp1.telefono = "+57 300 1234567"
             emp1.email = "contacto@chaneques.com"
             emp1.estado = "Activo"
+            emp1.plan_membresia = PLAN_MEMBRESIA_DEFAULT
+            emp1.precio_membresia = PRECIO_MEMBRESIA_COP
+            emp1.estado_membresia = "Activa"
+            emp1.fecha_inicio_membresia = ahora
+            emp1.fecha_vencimiento_membresia = venc
+            emp1.auto_renovacion = 1
             emp1.save()
 
             emp2 = Empresas()
@@ -23,6 +33,12 @@ class EmpresasController:
             emp2.telefono = "+57 315 9876543"
             emp2.email = "contacto@lavainilla.com"
             emp2.estado = "Activo"
+            emp2.plan_membresia = PLAN_MEMBRESIA_DEFAULT
+            emp2.precio_membresia = PRECIO_MEMBRESIA_COP
+            emp2.estado_membresia = "Activa"
+            emp2.fecha_inicio_membresia = ahora
+            emp2.fecha_vencimiento_membresia = venc
+            emp2.auto_renovacion = 1
             emp2.save()
 
             empresas = [emp1, emp2]
@@ -38,6 +54,7 @@ class EmpresasController:
         if nit and session.query(Empresas).filter_by(nit=nit).first():
             raise Exception(f"Ya existe una empresa registrada con el NIT '{nit}'.")
 
+        ahora = datetime.now()
         empresa = Empresas()
         empresa.nombre = data["nombre"]
         empresa.nit = nit
@@ -45,6 +62,12 @@ class EmpresasController:
         empresa.telefono = data.get("telefono", "")
         empresa.email = data.get("email", "")
         empresa.estado = data.get("estado", "Activo")
+        empresa.plan_membresia = data.get("plan_membresia") or PLAN_MEMBRESIA_DEFAULT
+        empresa.precio_membresia = PRECIO_MEMBRESIA_COP
+        empresa.estado_membresia = data.get("estado_membresia") or "Activa"
+        empresa.fecha_inicio_membresia = ahora
+        empresa.fecha_vencimiento_membresia = ahora + timedelta(days=DIAS_MEMBRESIA_CICLO)
+        empresa.auto_renovacion = 1 if data.get("auto_renovacion", True) else 0
         empresa.save()
 
         usuario_id = data.get("usuario_id")
@@ -79,6 +102,12 @@ class EmpresasController:
             empresa.email = data["email"]
         if "estado" in data:
             empresa.estado = data["estado"]
+        if "plan_membresia" in data:
+            empresa.plan_membresia = data["plan_membresia"]
+        if "estado_membresia" in data:
+            empresa.estado_membresia = data["estado_membresia"]
+        if "auto_renovacion" in data:
+            empresa.auto_renovacion = 1 if data["auto_renovacion"] else 0
 
         empresa.update()
         return empresa

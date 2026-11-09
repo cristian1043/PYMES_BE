@@ -148,6 +148,10 @@ def update_usuario(id):
 
         data = request.get_json() or {}
 
+        # Los identificadores de identidad son estrictamente inmutables (no se pueden modificar)
+        for campo_inmutable in ("id", "documento", "tipo_documento", "username"):
+            data.pop(campo_inmutable, None)
+
         # Si no es Administrador, no puede auto-cambiarse el rol ni el estado de cuenta
         if not es_admin:
             data.pop("id_rol", None)

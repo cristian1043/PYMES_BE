@@ -313,13 +313,22 @@ class CobrosService:
             return 400, "JSON inválido"
         referencia = wompi.extraer_referencia_webhook(evento)
         tx = TransaccionesPago.get_by_referencia(referencia)
+        es_membresia = False
+        if not tx and referencia:
+            from src.models.pagos_membresia import PagosMembresia
+            tx = PagosMembresia.get_by_referencia(referencia)
+            es_membresia = tx is not None
         if not tx:
             # Evento de una transacción que no es nuestra: responder 200 para que Wompi no reintente.
             return 200, "Referencia desconocida (ignorado)"
         metodo = MetodosPago.get_by_id(tx.id_metodo_pago)
         if not metodo or not wompi.verificar_webhook(evento, headers, metodo):
             return 401, "Firma inválida"
-        CobrosService.aplicar_resultado(tx, wompi.resultado_webhook(evento), origen="webhook Wompi")
+        if es_membresia:
+            from src.services.pagos.membresias_service import MembresiasService
+            MembresiasService.aplicar_resultado(tx, wompi.resultado_webhook(evento), origen="webhook Wompi")
+        else:
+            CobrosService.aplicar_resultado(tx, wompi.resultado_webhook(evento), origen="webhook Wompi")
         return 200, "OK"
 
     @staticmethod
@@ -330,23 +339,40 @@ class CobrosService:
             return 400, "JSON inválido"
         referencia = bold.extraer_referencia_webhook(evento)
         tx = TransaccionesPago.get_by_referencia(referencia)
+        es_membresia = False
+        if not tx and referencia:
+            from src.models.pagos_membresia import PagosMembresia
+            tx = PagosMembresia.get_by_referencia(referencia)
+            es_membresia = tx is not None
         if not tx:
             return 200, "Referencia desconocida (ignorado)"
         metodo = MetodosPago.get_by_id(tx.id_metodo_pago)
         if not metodo or not bold.verificar_webhook_raw(raw_body, headers, metodo):
             return 401, "Firma inválida"
-        CobrosService.aplicar_resultado(tx, bold.resultado_webhook(evento), origen="webhook Bold")
+        if es_membresia:
+            from src.services.pagos.membresias_service import MembresiasService
+            MembresiasService.aplicar_resultado(tx, bold.resultado_webhook(evento), origen="webhook Bold")
+        else:
+            CobrosService.aplicar_resultado(tx, bold.resultado_webhook(evento), origen="webhook Bold")
         return 200, "OK"
 
     @staticmethod
     def procesar_retorno_wompi(referencia, id_transaccion):
         """El cliente regresa del checkout de Wompi (?id=...). Se guarda el ID y se consulta el estado real."""
         tx = TransaccionesPago.get_by_referencia(referencia)
+        es_membresia = False
+        if not tx and referencia:
+            from src.models.pagos_membresia import PagosMembresia
+            tx = PagosMembresia.get_by_referencia(referencia)
+            es_membresia = tx is not None
         if not tx:
             return None
         if id_transaccion and not tx.id_externo:
             tx.id_externo = str(id_transaccion)[:120]
             tx.update()
+        if es_membresia:
+            from src.services.pagos.membresias_service import MembresiasService
+            return MembresiasService.refrescar(tx)
         return CobrosService.refrescar(tx)
 
     # ------------------------------------------------------------------

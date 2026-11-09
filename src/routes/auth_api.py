@@ -32,7 +32,7 @@ def refresh():
         usuario = Usuarios.get_by_id(user_id) if user_id else None
         
         if usuario:
-            if usuario.estado and usuario.estado.lower() == "inactivo":
+            if usuario.estado and usuario.estado.lower() in ("inactivo", "eliminado"):
                 return jsonify({"exito": False, "mensaje": "El usuario se encuentra inactivo"}), 403
             rol = Roles.get_by_id(usuario.id_rol)
             nombre_rol = rol.nombre if rol else "Usuario"
@@ -125,6 +125,32 @@ def recuperar_password_confirmar():
         print(f"Error en /api/auth/recuperar-password-confirmar: {str(e)}")
         return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
 
+@auth_bp.route("/eliminar-cuenta-solicitar", methods=["POST"])
+@jwt_required()
+def eliminar_cuenta_solicitar():
+    try:
+        data = request.get_json() or {}
+        current_user_id = get_jwt_identity()
+        password_actual = data.get("password_actual") or data.get("password")
+        resultado, status_code = AuthController.solicitar_eliminacion_cuenta(current_user_id, password_actual)
+        return jsonify(resultado), status_code
+    except Exception as e:
+        print(f"Error en /api/auth/eliminar-cuenta-solicitar: {str(e)}")
+        return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
+
+@auth_bp.route("/eliminar-cuenta-confirmar", methods=["POST"])
+@jwt_required()
+def eliminar_cuenta_confirmar():
+    try:
+        data = request.get_json() or {}
+        current_user_id = get_jwt_identity()
+        codigo = data.get("codigo") or data.get("token")
+        resultado, status_code = AuthController.confirmar_eliminacion_cuenta(current_user_id, codigo)
+        return jsonify(resultado), status_code
+    except Exception as e:
+        print(f"Error en /api/auth/eliminar-cuenta-confirmar: {str(e)}")
+        return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
+
 @auth_bp.route("/logout-global", methods=["POST"])
 @jwt_required()
 def logout_global():
@@ -135,4 +161,3 @@ def logout_global():
     except Exception as e:
         print(f"Error en /api/auth/logout-global: {str(e)}")
         return jsonify({"exito": False, "mensaje": f"Error interno: {str(e)}"}), 500
-

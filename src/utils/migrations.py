@@ -47,11 +47,21 @@ class DatabaseMigrations:
                         pass
 
                 # Columnas adicionales para la tabla empresas
-                try:
-                    conn.execute(text("ALTER TABLE empresas ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'"))
-                    conn.commit()
-                except Exception:
-                    pass
+                columnas_empresas = [
+                    "ALTER TABLE empresas ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'",
+                    "ALTER TABLE empresas ADD COLUMN plan_membresia VARCHAR(60) DEFAULT 'Plan PYME Mensual'",
+                    "ALTER TABLE empresas ADD COLUMN precio_membresia FLOAT DEFAULT 19900.0",
+                    "ALTER TABLE empresas ADD COLUMN estado_membresia VARCHAR(30) DEFAULT 'Activa'",
+                    "ALTER TABLE empresas ADD COLUMN fecha_inicio_membresia DATETIME",
+                    "ALTER TABLE empresas ADD COLUMN fecha_vencimiento_membresia DATETIME",
+                    "ALTER TABLE empresas ADD COLUMN auto_renovacion INT DEFAULT 1"
+                ]
+                for query in columnas_empresas:
+                    try:
+                        conn.execute(text(query))
+                        conn.commit()
+                    except Exception:
+                        pass
 
                 # Columnas adicionales para la tabla facturas
                 columnas_facturas = [
@@ -304,9 +314,24 @@ class DatabaseMigrations:
                 if empresa_id and str(empresa_id).isdigit() and int(empresa_id) not in ids_empresas:
                     ids_empresas.append(int(empresa_id))
                 try:
+                    from datetime import datetime, timedelta
+                    ahora = datetime.now()
                     for emp in session.query(Empresas).all():
                         if emp.id and int(emp.id) not in ids_empresas:
                             ids_empresas.append(int(emp.id))
+                        if not emp.plan_membresia:
+                            emp.plan_membresia = "Plan PYME Mensual"
+                        if not emp.precio_membresia:
+                            emp.precio_membresia = 19900.0
+                        if not emp.estado_membresia:
+                            emp.estado_membresia = "Activa"
+                        if not emp.fecha_inicio_membresia:
+                            emp.fecha_inicio_membresia = ahora
+                        if not emp.fecha_vencimiento_membresia:
+                            emp.fecha_vencimiento_membresia = ahora + timedelta(days=30)
+                        if emp.auto_renovacion is None:
+                            emp.auto_renovacion = 1
+                    session.commit()
                 except Exception:
                     pass
 

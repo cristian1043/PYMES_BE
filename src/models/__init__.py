@@ -39,3 +39,4 @@ from src.models.detalle_compras import DetalleCompras
 from src.models.movimiento_inventario import MovimientosInventario
 from src.models.terminales import Terminales
 from src.models.transacciones_pago import TransaccionesPago
+from src.models.pagos_membresia import PagosMembresia

@@ -28,6 +28,7 @@ from src.models.empresas import Empresas
 from src.models.usuario_empresas import UsuarioEmpresas
 from src.models.terminales import Terminales
 from src.models.transacciones_pago import TransaccionesPago
+from src.models.pagos_membresia import PagosMembresia
 
 # Crear todas las tablas y ejecutar migraciones en la base de datos
 Base.metadata.create_all(bind=engine)
@@ -107,7 +108,8 @@ from src.routes import (
     usuario_empresas_bp,
     terminales_bp,
     cobros_bp,
-    webhooks_bp
+    webhooks_bp,
+    membresias_bp
 )
 
 # Aplicar Rate Limit a login contra ataques de Fuerza Bruta (máx 10 intentos/minuto por IP)
@@ -132,6 +134,7 @@ app.register_blueprint(usuario_empresas_bp, url_prefix="/api/usuario_empresas")
 app.register_blueprint(terminales_bp, url_prefix="/api/terminales")
 app.register_blueprint(cobros_bp, url_prefix="/api/cobros")
 app.register_blueprint(webhooks_bp, url_prefix="/api/webhooks")
+app.register_blueprint(membresias_bp, url_prefix="/api/membresias")
 
 @app.errorhandler(429)
 def ratelimit_handler(e):

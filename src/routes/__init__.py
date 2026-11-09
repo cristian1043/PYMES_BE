@@ -16,3 +16,4 @@ from .auth_api import auth_bp
 from .terminales_api import terminales_bp
 from .cobros_api import cobros_bp
 from .webhooks_api import webhooks_bp
+from .membresias_api import membresias_bp

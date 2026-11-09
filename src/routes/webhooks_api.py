@@ -50,11 +50,19 @@ def retorno_wompi():
 def checkout_simulado():
     """Checkout interactivo de pruebas (PSE / Nequi / QR Bancolombia / Tarjeta) para pagos sin llaves reales."""
     from src.models.transacciones_pago import TransaccionesPago
+    from src.models.pagos_membresia import PagosMembresia
     from src.models.facturas import Facturas
+    from src.models.empresas import Empresas
     from src.models.metodos_pago import MetodosPago
+    from src.services.pagos.membresias_service import MembresiasService
 
     ref = request.args.get("ref") or request.form.get("ref")
     tx = TransaccionesPago.get_by_referencia(ref) if ref else None
+    es_membresia = False
+    if not tx and ref:
+        tx = PagosMembresia.get_by_referencia(ref)
+        es_membresia = tx is not None
+
     if not tx:
         return Response("<h3>Cobro no encontrado</h3>", status=404, mimetype="text/html")
 
@@ -70,23 +78,42 @@ def checkout_simulado():
         resultado = request.form.get("resultado", "APROBADA")
         medio = request.form.get("medio", "PSE / Nequi")
         try:
-            CobrosService.simular(tx, resultado)
+            if es_membresia:
+                MembresiasService.simular(tx, resultado)
+            else:
+                CobrosService.simular(tx, resultado)
             if medio and tx.mensaje:
                 tx.mensaje = f"[SIMULADO - {medio}] {tx.mensaje}"[:255]
                 tx.update()
         except Exception:
             pass
 
-    factura = Facturas.get_by_id(tx.id_factura)
-    num_fac = getattr(factura, "numero", f"#{tx.id_factura}")
-    monto_fmt = f"${tx.monto:,.2f} {tx.moneda or 'COP'}"
+    if es_membresia:
+        emp = Empresas.get_by_id(tx.id_empresa)
+        nombre_emp = getattr(emp, "nombre", f"Empresa #{tx.id_empresa}")
+        etiqueta_cobro = f"Membresía PYMEsoft — {nombre_emp}"
+        descripcion_aprobado = (
+            f"La <strong>Membresía Mensual ({escape(str(nombre_emp))})</strong> por "
+            f"<strong>${tx.monto:,.0f} {escape(tx.moneda or 'COP')}</strong> ha quedado "
+            f"<strong>Activa por 30 días</strong> en PYMEsoft."
+        )
+    else:
+        factura = Facturas.get_by_id(tx.id_factura)
+        num_fac = getattr(factura, "numero", f"#{tx.id_factura}")
+        etiqueta_cobro = f"Factura {num_fac}"
+        descripcion_aprobado = (
+            f"La factura <strong>{escape(str(num_fac))}</strong> por "
+            f"<strong>${tx.monto:,.2f} {escape(tx.moneda or 'COP')}</strong> ha quedado marcada como "
+            f"<strong>Pagada</strong> en PYMEsoft."
+        )
+
+    monto_fmt = f"${tx.monto:,.0f} {tx.moneda or 'COP'}" if es_membresia else f"${tx.monto:,.2f} {tx.moneda or 'COP'}"
 
     if tx.estado == "APROBADA":
         cuerpo = (
             f"<div style='font-size:48px'>✅</div>"
             f"<h2 style='color:#16a34a;margin:8px 0'>¡Pago Aprobado Exitosamente!</h2>"
-            f"<p>La factura <strong>{escape(str(num_fac))}</strong> por <strong>{escape(monto_fmt)}</strong> "
-            f"ha quedado marcada como <strong>Pagada</strong> en PYMEsoft.</p>"
+            f"<p>{descripcion_aprobado}</p>"
             f"<p style='font-size:13px;color:#64748b'>Referencia: <code>{escape(tx.referencia)}</code></p>"
             f"<button onclick='window.close()' style='margin-top:12px;background:#1e3c72;color:#fff;border:none;"
             f"padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer'>Cerrar ventana</button>"
@@ -102,12 +129,12 @@ def checkout_simulado():
         cuerpo = (
             f"<div style='background:#eff6ff;color:#1d4ed8;padding:6px 12px;border-radius:20px;font-size:12px;"
             f"font-weight:700;display:inline-block;margin-bottom:10px'>🔒 PASARELA WOMPI / BOLD SANDBOX (MODO PRUEBAS)</div>"
-            f"<h2 style='margin:4px 0'>Pago de Factura {escape(str(num_fac))}</h2>"
+            f"<h2 style='margin:4px 0'>Pago de {escape(str(etiqueta_cobro))}</h2>"
             f"<h1 style='color:#16a34a;margin:8px 0'>{escape(monto_fmt)}</h1>"
             f"<p style='font-size:13px;color:#64748b;margin-bottom:16px'>Ref: <code>{escape(tx.referencia)}</code></p>"
             f"<form method='POST' style='text-align:left'>"
             f"<input type='hidden' name='ref' value='{escape(tx.referencia)}'>"
-            f"<label style='font-weight:700;font-size:13px;display:block;margin-bottom:6px'>Selecciona el medio de pago del cliente:</label>"
+            f"<label style='font-weight:700;font-size:13px;display:block;margin-bottom:6px'>Selecciona el medio de pago:</label>"
             f"<select name='medio' style='width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;margin-bottom:16px;font-size:14px'>"
             f"<option value='Nequi / Billetera Digital'>📱 Nequi / Daviplata</option>"
             f"<option value='PSE Transferencia Bancaria'>🏦 PSE - Débito Bancario (Bancolombia, Davivienda, etc.)</option>"
@@ -125,7 +152,7 @@ def checkout_simulado():
     html = (
         "<!doctype html><html lang='es'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        f"<title>Checkout PYMEsoft - {escape(str(num_fac))}</title>"
+        f"<title>Checkout PYMEsoft - {escape(str(etiqueta_cobro))}</title>"
         "<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;"
         "min-height:100vh;margin:0;background:#0f172a;color:#1e293b}.c{background:#fff;padding:28px;border-radius:16px;"
         "box-shadow:0 12px 32px rgba(0,0,0,.25);max-width:440px;width:90%;text-align:center}</style></head>"
